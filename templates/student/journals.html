@@ -1,0 +1,197 @@
+
+{% extends "student/base_student.html" %}
+
+{% block title %}My Journals{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HEADER -->
+<section class="journals-heading">
+    <div>
+        <span class="section-eyebrow">PERSONAL RECORDS</span>
+        <h1>My Journals</h1>
+        <p>
+            Seluruh catatan aktivitas PKL yang telah kamu simpan di ACTRACE.
+        </p>
+    </div>
+
+    <div class="journals-heading__actions">
+
+        <a
+            href="{{ url_for('student.add_journal') }}"
+            class="add-journal-button add-journal-button--submit"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                width="16"
+                height="16"
+            >
+                <path
+                    d="M12 5v14M5 12h14"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                />
+            </svg>
+            <span>Add Journal</span>
+        </a>
+
+        <a
+            href="{{ url_for('student.dashboard') }}"
+            class="journals-back-link"
+        >
+            <svg class="icon" aria-hidden="true">
+                <use href="#icon-arrow"></use>
+            </svg>
+            Kembali ke Dashboard
+        </a>
+
+    </div>
+</section>
+
+
+<!-- JOURNAL SUMMARY -->
+<section
+    class="journals-summary"
+    aria-label="Ringkasan jurnal"
+>
+    <div class="journals-summary__icon">
+        <svg class="icon" aria-hidden="true">
+            <use href="#icon-journal"></use>
+        </svg>
+    </div>
+
+    <div>
+        <span class="journals-summary__label">
+            TOTAL CATATAN
+        </span>
+
+        <strong>{{ journals|length }}</strong>
+
+        <span class="journals-summary__description">
+            jurnal aktivitas tersimpan
+        </span>
+    </div>
+</section>
+
+
+<!-- JOURNAL LIST -->
+<section
+    class="journals-panel"
+    aria-labelledby="journals-list-title"
+>
+
+    <div class="journals-panel__header">
+        <div>
+            <span class="section-eyebrow">
+                ACTIVITY HISTORY
+            </span>
+
+            <h2 id="journals-list-title">
+                Daftar Jurnal
+            </h2>
+        </div>
+
+        <span class="journals-count">
+            {{ journals|length }} catatan
+        </span>
+    </div>
+
+
+    {% if journals %}
+
+        <div class="journals-list">
+
+            {% for journal in journals %}
+
+                <article class="journal-entry journal-entry--linked">
+
+                    <div class="journal-entry__date">
+                        <span class="journal-entry__day">
+                            {{ journal.activity_date.strftime('%d') }}
+                        </span>
+
+                        <span class="journal-entry__month">
+                            {{ journal.activity_date.strftime('%b %Y') }}
+                        </span>
+                    </div>
+
+
+                    <div class="journal-entry__body">
+                        <h3>{{ journal.title }}</h3>
+
+                        <p>
+                            {{ journal.description|truncate(220, True, '...') }}
+                        </p>
+                        <a class="journal-entry__view" href="{{ url_for('student.detail_journal', journal_id=journal.journal_id) }}">
+                            Lihat detail <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+
+
+                    <a
+                        href="{{ url_for('student.detail_journal', journal_id=journal.journal_id) }}"
+                        class="journal-entry__marker"
+                        aria-label="Lihat detail jurnal {{ journal.title }}"
+                        title="Lihat detail jurnal"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-book"></use>
+                        </svg>
+                    </a>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- EMPTY STATE -->
+        <div class="journals-empty">
+
+            <div class="journals-empty__icon">
+                <svg class="icon" aria-hidden="true">
+                    <use href="#icon-journal"></use>
+                </svg>
+            </div>
+
+            <h3>Belum ada jurnal aktivitas</h3>
+
+            <p>
+                Mulai dokumentasikan kegiatan PKL-mu
+                dengan membuat jurnal aktivitas pertama.
+            </p>
+
+            <a
+                href="{{ url_for('student.add_journal') }}"
+                class="add-journal-button add-journal-button--submit"
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                >
+                    <path
+                        d="M12 5v14M5 12h14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                    />
+                </svg>
+
+                <span>Create Your First Journal</span>
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

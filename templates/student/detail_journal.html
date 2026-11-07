@@ -1,0 +1,564 @@
+
+{% extends "student/base_student.html" %}
+
+{% block title %}Detail Journal | ACTRACE{% endblock %}
+
+{% block content %}
+
+<div class="journal-detail-page">
+
+    <!-- =========================================
+         PAGE HEADER
+    ========================================== -->
+
+    <div class="page-header">
+
+        <div class="page-header-content">
+
+            <div class="breadcrumb">
+                <a href="{{ url_for('student.dashboard') }}">
+                    Dashboard
+                </a>
+
+                <span>/</span>
+
+                <a href="{{ url_for('student.journals') }}">
+                    My Journals
+                </a>
+
+                <span>/</span>
+
+                <span>Detail Journal</span>
+            </div>
+
+            <div class="page-heading">
+
+                <div>
+                    <h1>Journal Details</h1>
+
+                    <p>
+                        Lihat informasi lengkap dan dokumentasi
+                        aktivitas PKL kamu.
+                    </p>
+                </div>
+
+                <div class="page-actions">
+
+                    <a
+                        href="{{ url_for('student.journals') }}"
+                        class="btn btn-secondary"
+                    >
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Journals</span>
+                    </a>
+
+                    <a
+                        href="{{ url_for('student.edit_journal', journal_id=journal.journal_id) }}"
+                        class="btn btn-primary"
+                    >
+                        <i class="fas fa-pen"></i>
+                        <span>Edit Journal</span>
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         JOURNAL INFORMATION
+    ========================================== -->
+
+    <div class="journal-detail-grid">
+
+        <main class="journal-main-content">
+
+            <!-- JOURNAL CARD -->
+
+            <section class="journal-detail-card">
+
+                <div class="journal-card-header">
+
+                    <div class="journal-category">
+                        <span class="category-icon">
+                            <i class="fas fa-book-open"></i>
+                        </span>
+
+                        <span>Activity Journal</span>
+                    </div>
+
+                    <span class="journal-id">
+                        #{{ journal.journal_id }}
+                    </span>
+
+                </div>
+
+
+                <div class="journal-content">
+
+                    <h2 class="journal-title">
+                        {{ journal.title }}
+                    </h2>
+
+                    <div class="journal-date">
+
+                        <i class="far fa-calendar-alt"></i>
+
+                        <span>
+                            {{ journal.activity_date.strftime('%d %B %Y') }}
+                        </span>
+
+                    </div>
+
+                    <div class="journal-divider"></div>
+
+                    <div class="journal-description">
+
+                        <h3>
+                            Activity Description
+                        </h3>
+
+                        <div class="description-content">
+                            {{ journal.description|e|replace('\n', '<br>')|safe }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================
+                 PHOTO DOCUMENTATION
+            ================================== -->
+
+            <section class="journal-detail-card photo-section">
+
+                <div class="section-header">
+
+                    <div>
+                        <h3>Photo Documentation</h3>
+
+                        <p>
+                            Dokumentasi kegiatan yang dilampirkan
+                            pada jurnal ini.
+                        </p>
+                    </div>
+
+                    <span class="photo-count">
+                        <i class="fas fa-images"></i>
+
+                        {{ journal.photos|length }} / 5 Photos
+                    </span>
+
+                </div>
+
+
+                {% if journal.photos %}
+
+                    <div class="journal-photo-grid">
+
+                        {% for photo in journal.photos %}
+
+                            <button
+                                type="button"
+                                class="journal-photo-item"
+                                data-photo-index="{{ loop.index0 }}"
+                                data-photo-url="{{ url_for(
+                                    'student.journal_photo',
+                                    journal_id=journal.journal_id,
+                                    photo_id=photo.photo_id
+                                ) }}"
+                                aria-label="Lihat foto {{ loop.index }}"
+                            >
+
+                                <img
+                                    src="{{ url_for(
+                                        'student.journal_photo',
+                                        journal_id=journal.journal_id,
+                                        photo_id=photo.photo_id
+                                    ) }}"
+                                    alt="Dokumentasi {{ journal.title }} - Foto {{ loop.index }}"
+                                    loading="lazy"
+                                >
+
+                                <span class="photo-overlay">
+                                    <i class="fas fa-expand-alt"></i>
+                                </span>
+
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty-photo-state">
+
+                        <div class="empty-photo-icon">
+                            <i class="far fa-image"></i>
+                        </div>
+
+                        <h4>No Photos Available</h4>
+
+                        <p>
+                            Belum ada dokumentasi foto
+                            yang dilampirkan pada jurnal ini.
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+        </main>
+
+
+        <!-- =====================================
+             JOURNAL SIDEBAR
+        ====================================== -->
+
+        <aside class="journal-sidebar">
+
+            <!-- JOURNAL STATUS -->
+
+            <section class="journal-detail-card sidebar-card">
+
+                <div class="sidebar-card-heading">
+                    <i class="fas fa-info-circle"></i>
+                    <h3>Journal Information</h3>
+                </div>
+
+                <div class="information-list">
+
+                    <div class="information-item">
+
+                        <span class="information-label">
+                            Journal ID
+                        </span>
+
+                        <strong>
+                            #{{ journal.journal_id }}
+                        </strong>
+
+                    </div>
+
+                    <div class="information-item">
+
+                        <span class="information-label">
+                            Activity Date
+                        </span>
+
+                        <strong>
+                            {{ journal.activity_date.strftime('%d %b %Y') }}
+                        </strong>
+
+                    </div>
+
+                    <div class="information-item">
+
+                        <span class="information-label">
+                            Total Photos
+                        </span>
+
+                        <strong>
+                            {{ journal.photos|length }} Photos
+                        </strong>
+
+                    </div>
+
+                    <div class="information-item">
+
+                        <span class="information-label">
+                            Created At
+                        </span>
+
+                        <strong>
+                            {{ journal.created_at.strftime('%d %b %Y, %H:%M') }}
+                        </strong>
+
+                    </div>
+
+                    <div class="information-item">
+
+                        <span class="information-label">
+                            Last Updated
+                        </span>
+
+                        <strong>
+                            {{ journal.updated_at.strftime('%d %b %Y, %H:%M') }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- QUICK ACTIONS -->
+
+            <section class="journal-detail-card sidebar-card">
+
+                <div class="sidebar-card-heading">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Quick Actions</h3>
+                </div>
+
+                <div class="quick-actions">
+
+                    <a
+                        href="{{ url_for('student.edit_journal', journal_id=journal.journal_id) }}"
+                        class="quick-action-item"
+                    >
+                        <span class="quick-action-icon edit-icon">
+                            <i class="fas fa-edit"></i>
+                        </span>
+
+                        <span>
+                            <strong>Edit Journal</strong>
+                            <small>Perbarui informasi jurnal</small>
+                        </span>
+
+                        <i class="fas fa-chevron-right action-arrow"></i>
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('student.journals') }}"
+                        class="quick-action-item"
+                    >
+                        <span class="quick-action-icon back-icon">
+                            <i class="fas fa-list"></i>
+                        </span>
+
+                        <span>
+                            <strong>My Journals</strong>
+                            <small>Kembali ke daftar jurnal</small>
+                        </span>
+
+                        <i class="fas fa-chevron-right action-arrow"></i>
+                    </a>
+
+                </div>
+
+            </section>
+
+        </aside>
+
+    </div>
+
+</div>
+
+
+<!-- =============================================
+     PHOTO LIGHTBOX
+============================================== -->
+
+<div
+    class="photo-lightbox"
+    id="photoLightbox"
+    aria-hidden="true"
+>
+
+    <button
+        type="button"
+        class="lightbox-close"
+        id="lightboxClose"
+        aria-label="Tutup gambar"
+    >
+        <i class="fas fa-times"></i>
+    </button>
+
+    <button
+        type="button"
+        class="lightbox-navigation lightbox-prev"
+        id="lightboxPrev"
+        aria-label="Foto sebelumnya"
+    >
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <div class="lightbox-content">
+
+        <img
+            src=""
+            alt="Preview dokumentasi jurnal"
+            id="lightboxImage"
+        >
+
+        <div
+            class="lightbox-counter"
+            id="lightboxCounter"
+        ></div>
+
+    </div>
+
+    <button
+        type="button"
+        class="lightbox-navigation lightbox-next"
+        id="lightboxNext"
+        aria-label="Foto berikutnya"
+    >
+        <i class="fas fa-chevron-right"></i>
+    </button>
+
+</div>
+
+
+<!-- =============================================
+     PAGE JAVASCRIPT
+============================================== -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const photoItems = Array.from(
+        document.querySelectorAll(".journal-photo-item")
+    );
+
+    const lightbox = document.getElementById("photoLightbox");
+    const lightboxImage = document.getElementById("lightboxImage");
+    const lightboxCounter = document.getElementById("lightboxCounter");
+
+    const closeButton = document.getElementById("lightboxClose");
+    const prevButton = document.getElementById("lightboxPrev");
+    const nextButton = document.getElementById("lightboxNext");
+
+    let currentIndex = 0;
+    let previousFocus = null;
+
+    if (!lightbox || !lightboxImage) {
+        return;
+    }
+
+    function updateLightbox() {
+
+        if (!photoItems.length) {
+            return;
+        }
+
+        const currentPhoto = photoItems[currentIndex];
+
+        lightboxImage.src = currentPhoto.dataset.photoUrl;
+
+        lightboxCounter.textContent =
+            `${currentIndex + 1} / ${photoItems.length}`;
+
+        const showNavigation = photoItems.length > 1;
+
+        prevButton.hidden = !showNavigation;
+        nextButton.hidden = !showNavigation;
+    }
+
+
+    function openLightbox(index) {
+
+        if (!photoItems.length) {
+            return;
+        }
+
+        currentIndex = index;
+        previousFocus = document.activeElement;
+
+        updateLightbox();
+
+        lightbox.classList.add("active");
+        lightbox.setAttribute("aria-hidden", "false");
+
+        document.body.style.overflow = "hidden";
+
+        closeButton.focus();
+    }
+
+
+    function closeLightbox() {
+
+        lightbox.classList.remove("active");
+        lightbox.setAttribute("aria-hidden", "true");
+
+        lightboxImage.removeAttribute("src");
+
+        document.body.style.overflow = "";
+
+        if (previousFocus) {
+            previousFocus.focus();
+        }
+    }
+
+
+    function showNext() {
+
+        currentIndex =
+            (currentIndex + 1) % photoItems.length;
+
+        updateLightbox();
+    }
+
+
+    function showPrevious() {
+
+        currentIndex =
+            (currentIndex - 1 + photoItems.length)
+            % photoItems.length;
+
+        updateLightbox();
+    }
+
+
+    photoItems.forEach(function (item, index) {
+
+        item.addEventListener("click", function () {
+            openLightbox(index);
+        });
+
+    });
+
+
+    closeButton.addEventListener("click", closeLightbox);
+
+    nextButton.addEventListener("click", showNext);
+
+    prevButton.addEventListener("click", showPrevious);
+
+
+    lightbox.addEventListener("click", function (event) {
+
+        if (event.target === lightbox) {
+            closeLightbox();
+        }
+
+    });
+
+
+    document.addEventListener("keydown", function (event) {
+
+        if (!lightbox.classList.contains("active")) {
+            return;
+        }
+
+        if (event.key === "Escape") {
+            closeLightbox();
+        }
+
+        if (event.key === "ArrowRight" && photoItems.length > 1) {
+            showNext();
+        }
+
+        if (event.key === "ArrowLeft" && photoItems.length > 1) {
+            showPrevious();
+        }
+
+    });
+
+});
+</script>
+
+{% endblock %}

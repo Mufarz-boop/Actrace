@@ -1,0 +1,406 @@
+{% extends "student/base_student.html" %}
+
+{% block title %}Activity Reports{% endblock %}
+
+{% block content %}
+<section class="report-page">
+
+    <!-- PAGE HEADER -->
+    <header class="report-page__heading">
+        <div>
+            <span class="section-eyebrow">
+                DOCUMENTATION &amp; EXPORT
+            </span>
+            <h1>Activity Reports</h1>
+            <p>
+                Buat laporan jurnal kegiatan berdasarkan periode
+                yang dipilih.
+            </p>
+        </div>
+
+        <a href="{{ url_for('student.dashboard') }}"
+           class="journals-back-link">
+            <i class="fas fa-arrow-left"></i>
+            Kembali ke Dashboard
+        </a>
+    </header>
+
+
+    <!-- DATE FILTER -->
+    <section class="report-filter panel"
+             aria-labelledby="report-filter-title">
+
+        <div class="panel__header">
+            <div>
+                <span class="section-eyebrow">PERIODE REKAP</span>
+                <h2 id="report-filter-title">
+                    Pilih Rentang Tanggal
+                </h2>
+                <p>
+                    Tentukan periode jurnal yang ingin direkap.
+                </p>
+            </div>
+
+            <div class="report-filter__icon">
+                <i class="fas fa-calendar-days"></i>
+            </div>
+        </div>
+
+        <form method="get"
+              action="{{ url_for('student.reports') }}"
+              class="report-filter__form"
+              id="report-filter-form">
+
+            <div class="report-date-field">
+                <label for="start_date">Tanggal awal</label>
+                <input type="date"
+                       id="start_date"
+                       name="start_date"
+                       value="{{ start_date }}"
+                       max="{{ today }}"
+                       required>
+            </div>
+
+            <div class="report-date-field">
+                <label for="end_date">Tanggal akhir</label>
+                <input type="date"
+                       id="end_date"
+                       name="end_date"
+                       value="{{ end_date }}"
+                       max="{{ today }}"
+                       required>
+            </div>
+
+            <button type="submit"
+                    class="add-journal-button add-journal-button--submit report-filter__submit">
+
+                <i class="fas fa-filter"></i>
+                Tampilkan Rekap
+
+            </button>
+        </form>
+
+        <div class="report-alert"
+             id="report-client-error"
+             role="alert"
+             hidden>
+        </div>
+
+        {% if error %}
+        <div class="report-alert" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+    </section>
+
+
+    {% if not error %}
+
+    <!-- REPORT SUMMARY -->
+    <section class="report-result">
+
+        <div class="report-result__top">
+            <div>
+                <span class="section-eyebrow">
+                    HASIL PENYARINGAN
+                </span>
+
+                <h2>Jurnal dalam Periode Ini</h2>
+
+                <p>
+                    {{ start_date }}
+                    <span aria-hidden="true">→</span>
+                    {{ end_date }}
+                </p>
+            </div>
+
+            <div class="report-total">
+                <strong>{{ total_journals }}</strong>
+                <span>Total jurnal</span>
+            </div>
+        </div>
+
+
+        <!-- STATISTICS -->
+        <div class="report-metrics">
+
+            <div class="report-metric">
+                <span>
+                    <i class="fas fa-book"></i>
+                    Total jurnal
+                </span>
+                <strong>{{ total_journals }}</strong>
+            </div>
+
+            <div class="report-metric">
+                <span>
+                    <i class="fas fa-camera"></i>
+                    Dokumentasi foto
+                </span>
+                <strong>{{ total_photos }}</strong>
+            </div>
+
+            <div class="report-metric">
+                <span>
+                    <i class="fas fa-calendar-check"></i>
+                    Hari kegiatan
+                </span>
+                <strong>{{ total_activity_days }}</strong>
+            </div>
+
+        </div>
+
+
+        <!-- PDF EXPORT -->
+        <div class="report-export panel">
+
+            <div class="report-export__copy">
+
+                <div class="report-export__icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+
+                <div>
+                    <h3>Laporan Rekapitulasi PDF</h3>
+
+                    <p>
+                        Dokumen PDF akan memuat seluruh detail
+                        jurnal, deskripsi lengkap, dokumentasi foto,
+                        metadata, dan informasi laporan.
+                    </p>
+                </div>
+
+            </div>
+
+            {% if journals %}
+
+            <a class="add-journal-button add-journal-button--submit report-export__button"
+               id="report-export-button"
+               href="{{ url_for(
+                   'student.download_journal_report',
+                   start_date=start_date,
+                   end_date=end_date
+               ) }}">
+
+                <i class="fas fa-download"></i>
+                <span>Generate &amp; Download PDF</span>
+
+            </a>
+
+            {% else %}
+
+            <span class="report-export__unavailable">
+                PDF tidak tersedia: belum ada jurnal.
+            </span>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- COMPACT JOURNAL LIST -->
+        <div class="report-journal-list">
+
+            {% if journals %}
+
+                {% for journal in journals %}
+
+                <article class="report-journal report-journal--compact">
+
+                    <!-- ACTIVITY DATE -->
+                    <div class="report-journal__date">
+                        <strong>
+                            {{ journal.activity_date.strftime('%d') }}
+                        </strong>
+
+                        <span>
+                            {{ journal.activity_date.strftime('%b %Y') }}
+                        </span>
+                    </div>
+
+
+                    <!-- JOURNAL INFORMATION -->
+                    <div class="report-journal__content">
+
+                        <div class="report-journal__identity">
+                            <span>
+                                JURNAL #{{ loop.index }}
+                            </span>
+
+                            <span>
+                                ID: {{ journal.journal_id }}
+                            </span>
+                        </div>
+
+
+                        <!-- JOURNAL TITLE -->
+                        <h3>{{ journal.title }}</h3>
+
+
+                        <!-- SHORT DESCRIPTION -->
+                        <p class="report-journal__excerpt">
+                            {{ (
+                                journal.description or
+                                'Tidak ada deskripsi.'
+                            ) | striptags | truncate(180, True, '…') }}
+                        </p>
+
+
+                        <!-- COMPACT METADATA -->
+                        <div class="report-journal__summary-meta">
+
+                            <span>
+                                <i class="fas fa-camera"></i>
+                                {{ journal.photo_count }} foto
+                            </span>
+
+                            <a href="{{ url_for(
+                                'student.detail_journal',
+                                journal_id=journal.journal_id
+                            ) }}">
+
+                                Lihat detail jurnal
+                                <i class="fas fa-arrow-right"></i>
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+                {% endfor %}
+
+
+            {% else %}
+
+                <!-- EMPTY STATE -->
+                <div class="report-empty">
+
+                    <div class="report-empty__icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+
+                    <h3>
+                        Belum ada jurnal pada periode ini
+                    </h3>
+
+                    <p>
+                        Coba pilih rentang tanggal lain.
+                        Tidak ada data yang akan hilang.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+    {% endif %}
+
+</section>
+{% endblock %}
+
+
+{% block scripts %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById(
+        "report-filter-form"
+    );
+
+    const start = document.getElementById(
+        "start_date"
+    );
+
+    const end = document.getElementById(
+        "end_date"
+    );
+
+    const error = document.getElementById(
+        "report-client-error"
+    );
+
+    const exportButton = document.getElementById(
+        "report-export-button"
+    );
+
+
+    // DATE VALIDATION
+    if (start && end) {
+
+        end.min = start.value || "";
+
+        start.addEventListener("change", function () {
+
+            end.min = start.value || "";
+
+            if (
+                end.value &&
+                start.value &&
+                end.value < start.value
+            ) {
+                end.value = start.value;
+            }
+
+        });
+
+    }
+
+
+    // FORM SUBMISSION
+    if (form) {
+
+        form.addEventListener("submit", function (event) {
+
+            error.hidden = true;
+
+            if (
+                start.value &&
+                end.value &&
+                start.value > end.value
+            ) {
+
+                event.preventDefault();
+
+                error.textContent =
+                    "Tanggal awal tidak boleh melewati tanggal akhir.";
+
+                error.hidden = false;
+
+            }
+
+        });
+
+    }
+
+
+    // PDF GENERATION LOADING
+    if (exportButton) {
+
+        exportButton.addEventListener("click", function () {
+
+            exportButton.classList.add("is-loading");
+
+            exportButton.setAttribute(
+                "aria-disabled",
+                "true"
+            );
+
+            exportButton.querySelector("span").textContent =
+                "Menyiapkan PDF...";
+
+        });
+
+    }
+
+});
+</script>
+
+{% endblock %}

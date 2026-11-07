@@ -1,0 +1,100 @@
+{% extends "student/base_student.html" %}
+
+{% block title %}Edit Journal | ACTRACE{% endblock %}
+
+{% block content %}
+<section class="edit-journal-page">
+    <header class="edit-journal-heading">
+        <div>
+            <a class="edit-journal-back" href="{{ url_for('student.detail_journal', journal_id=journal.journal_id) }}">
+                <i class="fas fa-arrow-left"></i> Kembali ke Detail Jurnal
+            </a>
+            <span class="edit-journal-eyebrow">PERSONAL ACTIVITY RECORD · #{{ journal.journal_id }}</span>
+            <h1>Edit Journal</h1>
+            <p>Perbarui informasi aktivitas dan kelola dokumentasi jurnalmu.</p>
+        </div>
+        <div class="edit-journal-heading-icon"><i class="fas fa-edit"></i></div>
+    </header>
+
+    <form id="edit-journal-form" class="edit-journal-form" method="POST"
+          action="{{ url_for('student.edit_journal', journal_id=journal.journal_id) }}"
+          enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <section class="edit-journal-card">
+            <div class="edit-journal-card-heading">
+                <span>01</span>
+                <div><h2>Informasi Aktivitas</h2><p>Pastikan informasi jurnal tetap akurat.</p></div>
+            </div>
+
+            <div class="edit-journal-field">
+                <label for="edit-title">Judul Aktivitas <b>*</b></label>
+                <input id="edit-title" type="text" name="title" maxlength="150"
+                       value="{{ request.form.get('title', journal.title) }}" required>
+                <small>Maksimal 150 karakter.</small>
+            </div>
+
+            <div class="edit-journal-field">
+                <label for="edit-date">Tanggal Aktivitas <b>*</b></label>
+                <input id="edit-date" type="date" name="activity_date"
+                       max="{{ today }}"
+                       value="{{ request.form.get('activity_date', journal.activity_date.isoformat()) }}" required>
+            </div>
+
+            <div class="edit-journal-field">
+                <label for="edit-description">Deskripsi Aktivitas <b>*</b></label>
+                <textarea id="edit-description" name="description" rows="9" required>{{ request.form.get('description', journal.description) }}</textarea>
+                <small>Format paragraf akan dipertahankan.</small>
+            </div>
+        </section>
+
+        <section class="edit-journal-card">
+            <div class="edit-journal-card-heading">
+                <span>02</span>
+                <div><h2>Dokumentasi Foto</h2><p>Pertahankan foto lama, pilih yang ingin dihapus, atau tambahkan foto baru.</p></div>
+            </div>
+
+            <div class="edit-photo-summary">
+                <strong><span id="edit-photo-count">{{ journal.photos|length }}</span> / 5 foto</strong>
+                <span id="edit-photo-remaining">Kapasitas tersisa {{ 5 - journal.photos|length }} foto</span>
+            </div>
+
+            {% if journal.photos %}
+            <div class="edit-existing-photos" id="edit-existing-photos">
+                {% for photo in journal.photos %}
+                <label class="edit-existing-photo" data-existing-photo>
+                    <img src="{{ url_for('student.journal_photo', journal_id=journal.journal_id, photo_id=photo.photo_id) }}"
+                         alt="Dokumentasi {{ loop.index }}" loading="lazy">
+                    <span class="edit-photo-check">
+                        <input type="checkbox" name="remove_photo_ids" value="{{ photo.photo_id }}" data-remove-photo>
+                        <span>Hapus foto</span>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="edit-no-photos"><i class="far fa-image"></i><span>Belum ada foto yang dilampirkan.</span></div>
+            {% endif %}
+
+            <div class="edit-upload-box">
+                <label for="edit-photos"><i class="fas fa-cloud-upload-alt"></i> Tambahkan Foto Baru</label>
+                <p>JPG, PNG, atau WebP. Maksimal 5 MB per foto.</p>
+                <input id="edit-photos" type="file" name="photos" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple>
+                <div id="edit-new-photo-preview" class="edit-new-photo-preview" aria-live="polite"></div>
+            </div>
+            <p class="edit-photo-warning">Jumlah foto yang dipertahankan ditambah foto baru tidak boleh melebihi 5.</p>
+        </section>
+
+        <div class="edit-journal-actions">
+            <a href="{{ url_for('student.detail_journal', journal_id=journal.journal_id) }}" class="edit-cancel-button">Batalkan</a>
+            <button type="submit" id="edit-save-button" class="edit-save-button">
+                <i class="fas fa-save"></i><span>Simpan Perubahan</span>
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/edit_journal.js') }}" defer></script>
+{% endblock %}

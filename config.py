@@ -103,7 +103,7 @@ class Config:
     # Upload Configuration
     # -----------------------------------------------------
 
-    MAX_CONTENT_LENGTH = env_int("MAX_CONTENT_LENGTH", 10485760)
+    MAX_CONTENT_LENGTH = env_int("MAX_CONTENT_LENGTH", 26 * 1024 * 1024)
     UPLOAD_FOLDER = (BASE_DIR/ "instance"/ "uploads"/ "journal_photos")
     ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 

@@ -54,16 +54,21 @@ ACTRACE/
 │
 ├── static/
 │   ├── css/
+│   │   ├── errors.css
 │   │   ├── style.css
 │   │   ├── auth.css
 │   │   └── student.css
 │   │
 │   ├── js/
+│   │   ├── edit_journal.js
+│   │   ├── errors.js
 │   │   ├── main.js
 │   │   ├── journal.js
 │   │   └── gallery.js
 │   │
 │   └── img/
+│       ├── auth-trace.svg
+│       └── favicon.svg
 │
 ├── instance/
 │   └── uploads/
@@ -75,6 +80,7 @@ ACTRACE/
 ├── config.py
 ├── run.py
 ├── requirements.txt
+├── IMPLEMENTATION_NOTES.md
 ├── .env
 ├── .env.example
 └── .gitignore

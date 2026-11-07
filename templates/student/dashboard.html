@@ -274,8 +274,7 @@
         </a>
 
 
-        <div class="quick-link quick-link--disabled"
-             aria-disabled="true">
+        <a href="{{ url_for('student.reports') }}" class="quick-link">
 
             <div class="quick-link__icon">
                 <svg class="icon" aria-hidden="true">
@@ -285,12 +284,14 @@
 
             <div class="quick-link__text">
                 <strong>Activity Reports</strong>
-                <span>Fitur laporan akan tersedia nanti.</span>
+                <span>Rekap jurnal berdasarkan periode dan unduh PDF.</span>
             </div>
 
-            <span class="coming-soon">Soon</span>
+            <svg class="icon quick-link__arrow" aria-hidden="true">
+                <use href="#icon-arrow"></use>
+            </svg>
 
-        </div>
+        </a>
 
 
         <div class="quick-link quick-link--disabled"

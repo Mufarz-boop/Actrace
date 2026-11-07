@@ -157,6 +157,17 @@
                         <span>My Journals</span>
                     </a>
 
+                    <a
+                        href="{{ url_for('student.reports') }}"
+                        class="nav-link {% if request.endpoint in ('student.reports', 'student.download_journal_report') %}nav-link--active{% endif %}"
+                        {% if request.endpoint in ('student.reports', 'student.download_journal_report') %}aria-current="page"{% endif %}
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-chart"></use>
+                        </svg>
+                        <span>Activity Reports</span>
+                    </a>
+
                 </nav>
 
 

@@ -1,0 +1,352 @@
+
+{% extends "student/base_student.html" %}
+
+{% block title %}Add Journal{% endblock %}
+
+{% block content %}
+
+<section class="add-journal-page">
+
+    <!-- PAGE HEADER -->
+    <div class="add-journal-heading">
+
+        <div class="add-journal-heading__content">
+
+            <a
+                href="{{ url_for('student.journals') }}"
+                class="add-journal-back"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+                <span>Back to My Journals</span>
+            </a>
+
+            <span class="add-journal-eyebrow">
+                PERSONAL ACTIVITY RECORD
+            </span>
+
+            <h1>Create New Journal</h1>
+
+            <p>
+                Record your daily activities, experiences,
+                and progress throughout your internship.
+            </p>
+
+        </div>
+
+        <div class="add-journal-heading__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5z"/>
+                <path d="M4 17.5A2.5 2.5 0 0 0 6.5 20M8 7h8M8 11h8M8 15h5"/>
+                <path d="M17 3v6m-3-3h6"/>
+            </svg>
+        </div>
+
+    </div>
+
+
+    <!-- JOURNAL FORM -->
+    <div class="add-journal-layout">
+
+        <form
+            id="add-journal-form"
+            class="add-journal-form"
+            method="POST"
+            action="{{ url_for('student.add_journal') }}"
+            enctype="multipart/form-data"
+            data-loading-form
+        >
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <!-- ACTIVITY INFORMATION -->
+            <section class="add-journal-card">
+
+                <div class="add-journal-card__header">
+
+                    <div class="add-journal-card__number">
+                        01
+                    </div>
+
+                    <div>
+                        <h2>Activity Information</h2>
+                        <p>
+                            Provide the basic information
+                            about your activity.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <!-- ACTIVITY DATE -->
+                <div class="add-journal-field">
+
+                    <label for="activity_date">
+                        Activity Date
+                        <span class="required-mark">*</span>
+                    </label>
+
+                    <input
+                        type="date"
+                        id="activity_date"
+                        name="activity_date"
+                        value="{{ request.form.get('activity_date', today) }}"
+                        max="{{ today }}"
+                        required
+                    >
+
+                    <small>
+                        Select the date when the activity took place.
+                    </small>
+
+                </div>
+
+
+                <!-- ACTIVITY TITLE -->
+                <div class="add-journal-field">
+
+                    <label for="title">
+                        Activity Title
+                        <span class="required-mark">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        maxlength="150"
+                        placeholder="e.g. Developing a Student Dashboard"
+                        value="{{ request.form.get('title', '') }}"
+                        required
+                    >
+
+                    <div class="add-journal-field__footer">
+                        <small>
+                            Write a short and descriptive title.
+                        </small>
+
+                        <span
+                            id="title-counter"
+                            class="add-journal-counter"
+                        >
+                            {{ request.form.get('title', '')|length }}/150
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <!-- DESCRIPTION -->
+                <div class="add-journal-field">
+
+                    <label for="description">
+                        Activity Description
+                        <span class="required-mark">*</span>
+                    </label>
+
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="8"
+                        placeholder="Describe what you worked on, what you learned, and the progress you made..."
+                        required
+                    >{{ request.form.get('description', '') }}</textarea>
+
+                    <small>
+                        Explain your activity clearly and accurately.
+                    </small>
+
+                </div>
+
+            </section>
+
+
+            <!-- PHOTO DOCUMENTATION -->
+            <section class="add-journal-card">
+
+                <div class="add-journal-card__header">
+
+                    <div class="add-journal-card__number">
+                        02
+                    </div>
+
+                    <div>
+                        <h2>Photo Documentation</h2>
+                        <p>
+                            Add photos that support your activity record.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="journal-upload-area"
+                    id="journal-upload-area"
+                >
+
+                    <input
+                        type="file"
+                        id="photos"
+                        name="photos"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        multiple
+                        hidden
+                    >
+
+                    <div class="journal-upload-area__icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 16V4m-4 4 4-4 4 4"/>
+                            <path d="M20 16.5v2A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-2"/>
+                        </svg>
+                    </div>
+
+                    <h3>Upload your documentation</h3>
+
+                    <p>
+                        Drag and drop your photos here or
+                        <button
+                            type="button"
+                            id="journal-browse-button"
+                            class="journal-upload-link"
+                        >
+                            browse files
+                        </button>
+                    </p>
+
+                    <span>
+                        JPG, PNG, or WebP · Maximum 5 photos · 5 MB each
+                    </span>
+
+                </div>
+
+
+                <!-- PHOTO PREVIEW -->
+                <div
+                    id="journal-photo-preview"
+                    class="journal-photo-preview"
+                    aria-live="polite"
+                ></div>
+
+                <p class="journal-upload-note">
+                    Photo documentation is optional.
+                    Only upload photos you are authorized to share.
+                </p>
+
+            </section>
+
+
+            <!-- FORM ACTIONS -->
+            <div class="add-journal-actions">
+
+                <a
+                    href="{{ url_for('student.journals') }}"
+                    class="add-journal-button add-journal-button--cancel"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="add-journal-button add-journal-button--submit"
+                    data-loading-label="Saving Journal..."
+                >
+                    <span class="btn__label">
+                        Save Journal
+                    </span>
+
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12h14m-6-6 6 6-6 6"/>
+                    </svg>
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <!-- INFORMATION PANEL -->
+        <aside class="add-journal-sidebar">
+
+            <div class="add-journal-tip">
+
+                <div class="add-journal-tip__icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 11v5m0-8h.01"/>
+                    </svg>
+                </div>
+
+                <h3>Journal Writing Tips</h3>
+
+                <p>
+                    A good activity journal should describe
+                    what happened and what you learned.
+                </p>
+
+                <ul>
+                    <li>
+                        <strong>Be specific</strong>
+                        <span>
+                            Describe the tasks you actually completed.
+                        </span>
+                    </li>
+
+                    <li>
+                        <strong>Record your progress</strong>
+                        <span>
+                            Mention important outcomes and difficulties.
+                        </span>
+                    </li>
+
+                    <li>
+                        <strong>Document your learning</strong>
+                        <span>
+                            Explain the knowledge or skills you gained.
+                        </span>
+                    </li>
+                </ul>
+
+            </div>
+
+
+            <div class="add-journal-privacy">
+
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="10" width="16" height="11" rx="2"/>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>
+                </svg>
+
+                <div>
+                    <strong>Your Journal, Your Record</strong>
+                    <p>
+                        Your journal belongs to your personal
+                        ACTRACE account.
+                    </p>
+                </div>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script
+    src="{{ url_for('static', filename='js/journal.js') }}"
+    defer
+></script>
+
+{% endblock %}
