@@ -1,0 +1,319 @@
+
+{% extends "student/base_student.html" %}
+
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+
+<section class="settings-page">
+
+    <!-- PAGE HEADER -->
+    <header class="settings-heading">
+        <div>
+            <span class="section-eyebrow">PERSONAL ACCOUNT</span>
+            <h1>Account Settings</h1>
+            <p>
+                Kelola keamanan dan pengaturan akun ACTRACE kamu.
+            </p>
+        </div>
+    </header>
+
+
+    <!-- ACCOUNT SUMMARY -->
+    <section class="settings-account">
+
+        <div class="settings-account__avatar">
+            {{ user.full_name[0]|upper if user.full_name else 'S' }}
+        </div>
+
+        <div class="settings-account__info">
+            <h2>{{ user.full_name }}</h2>
+            <p>@{{ user.username }}</p>
+            <span>Student Account</span>
+        </div>
+
+    </section>
+
+
+    <!-- PASSWORD & SECURITY -->
+    <section class="settings-card">
+
+        <header class="settings-card__heading">
+
+            <div class="settings-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="10" width="16" height="11" rx="2"/>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                    <path d="M12 14v3"/>
+                </svg>
+            </div>
+
+            <div>
+                <h2>Password & Security</h2>
+                <p>
+                    Perbarui kata sandi untuk menjaga keamanan akunmu.
+                </p>
+            </div>
+
+        </header>
+
+
+        <form
+            method="POST"
+            action="{{ url_for('student.settings') }}"
+            class="settings-form"
+        >
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+
+            <!-- CURRENT PASSWORD -->
+            <div class="settings-form__group">
+
+                <label for="current-password">
+                    Current Password
+                </label>
+
+                <div class="settings-password-field">
+
+                    <input
+                        type="password"
+                        id="current-password"
+                        name="current_password"
+                        placeholder="Enter your current password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        data-target="current-password"
+                        aria-label="Show password"
+                        aria-pressed="false"
+                        title="Show password"
+                    >
+
+                        <svg
+                            class="eye-icon eye-icon--open"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+
+                        <svg
+                            class="eye-icon eye-icon--closed"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="m3 3 18 18"/>
+                            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+                            <path d="M9.9 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a15 15 0 0 1-3.1 3.8"/>
+                            <path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/>
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="settings-form__divider"></div>
+
+
+            <!-- NEW PASSWORD -->
+            <div class="settings-form__group">
+
+                <label for="new-password">
+                    New Password
+                </label>
+
+                <div class="settings-password-field">
+
+                    <input
+                        type="password"
+                        id="new-password"
+                        name="new_password"
+                        placeholder="Create a new password"
+                        minlength="12"
+                        maxlength="72"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        data-target="new-password"
+                        aria-label="Show password"
+                        aria-pressed="false"
+                        title="Show password"
+                    >
+
+                        <svg
+                            class="eye-icon eye-icon--open"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+
+                        <svg
+                            class="eye-icon eye-icon--closed"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="m3 3 18 18"/>
+                            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+                            <path d="M9.9 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a15 15 0 0 1-3.1 3.8"/>
+                            <path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/>
+                        </svg>
+
+                    </button>
+
+                </div>
+
+                <small>
+                    Minimal 12 karakter dan maksimal 72 byte dalam UTF-8.
+                </small>
+
+            </div>
+
+
+            <!-- CONFIRM PASSWORD -->
+            <div class="settings-form__group">
+
+                <label for="confirm-password">
+                    Confirm New Password
+                </label>
+
+                <div class="settings-password-field">
+
+                    <input
+                        type="password"
+                        id="confirm-password"
+                        name="confirm_password"
+                        placeholder="Confirm your new password"
+                        minlength="12"
+                        maxlength="72"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        data-target="confirm-password"
+                        aria-label="Show password"
+                        aria-pressed="false"
+                        title="Show password"
+                    >
+
+                        <svg
+                            class="eye-icon eye-icon--open"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+
+                        <svg
+                            class="eye-icon eye-icon--closed"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="m3 3 18 18"/>
+                            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+                            <path d="M9.9 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a15 15 0 0 1-3.1 3.8"/>
+                            <path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/>
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- FORM ACTIONS -->
+            <div class="settings-form__actions">
+
+                <button
+                    type="submit"
+                    class="profile-button profile-button--primary"
+                >
+                    Update Password
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+    <!-- SESSION INFORMATION -->
+    <section class="settings-card">
+
+        <header class="settings-card__heading">
+
+            <div class="settings-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 7v5l3 2"/>
+                </svg>
+            </div>
+
+            <div>
+                <h2>Session Information</h2>
+                <p>
+                    Informasi mengenai sesi login ACTRACE saat ini.
+                </p>
+            </div>
+
+        </header>
+
+
+        <div class="settings-session">
+
+            <div>
+                <span>Session Status</span>
+
+                <strong class="settings-session__active">
+                    <span></span>
+                    Active
+                </strong>
+            </div>
+
+            <div>
+                <span>Session Duration</span>
+                <strong>2 Hours</strong>
+            </div>
+
+            <div>
+                <span>Student Code</span>
+                <strong>{{ user.student_code }}</strong>
+            </div>
+
+        </div>
+
+
+        <p class="settings-note">
+            Sesi login saat ini tetap aktif setelah kata sandi berhasil
+            diperbarui. Sesi mengikuti batas waktu yang ditetapkan ACTRACE.
+        </p>
+
+    </section>
+
+</section>
+
+{% endblock %}

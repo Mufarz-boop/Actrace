@@ -1,106 +1,200 @@
+
 /* ==========================================================================
    ACTRACE | main.js
-   Skrip global (vanilla JS). Setiap fitur aktif lewat atribut data-* sehingga
-   aman dimuat di halaman mana pun dan bisa dipakai ulang di fase berikutnya.
-
-   - [data-toggle-password]  : tombol tampil/sembunyi kata sandi
-   - form[data-loading-form] : status loading saat submit + cegah kirim ganda
-   - [data-autofocus]        : fokus awal ke input kosong pertama (perangkat mouse)
-   - [data-year]             : tahun berjalan untuk hak cipta
+   Global JavaScript
    ========================================================================== */
+
 (function () {
-  'use strict';
+    'use strict';
 
-  /* ---------- Tahun hak cipta ---------- */
-  function initYear() {
-    var year = String(new Date().getFullYear());
-    document.querySelectorAll('[data-year]').forEach(function (el) {
-      el.textContent = year;
-    });
-  }
+    /* =====================================================
+       COPYRIGHT YEAR
+    ===================================================== */
 
-  /* ---------- Tampil/sembunyi kata sandi ---------- */
-  function initPasswordToggle() {
-    document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
-      var input = document.getElementById(button.getAttribute('aria-controls'));
-      if (!input) { return; }
+    function initYear() {
+        var year = String(new Date().getFullYear());
 
-      button.addEventListener('click', function () {
-        var reveal = input.type === 'password';
-        input.type = reveal ? 'text' : 'password';
-        button.setAttribute('aria-pressed', String(reveal));
-        button.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
-      });
-    });
-  }
-
-  /* ---------- Status loading saat submit ---------- */
-  function setLoading(form, isLoading) {
-    var button = form.querySelector('button[type="submit"]');
-    if (!button) { return; }
-
-    var label = button.querySelector('.btn__label');
-    if (label && !label.dataset.defaultText) {
-      label.dataset.defaultText = label.textContent;
+        document.querySelectorAll('[data-year]').forEach(function (el) {
+            el.textContent = year;
+        });
     }
 
-    form.dataset.submitting = String(isLoading);
-    form.setAttribute('aria-busy', String(isLoading));
-    button.classList.toggle('is-loading', isLoading);
-    button.setAttribute('aria-disabled', String(isLoading));
 
-    if (label) {
-      label.textContent = isLoading
-        ? (button.dataset.loadingLabel || label.dataset.defaultText)
-        : label.dataset.defaultText;
+    /* =====================================================
+       PASSWORD VISIBILITY TOGGLE
+    ===================================================== */
+
+    function initPasswordToggle() {
+
+        // Mendukung markup baru dan markup lama ACTRACE.
+        var buttons = document.querySelectorAll(
+            '.password-toggle, [data-toggle-password]'
+        );
+
+        buttons.forEach(function (button) {
+
+            var targetId =
+                button.getAttribute('data-target') ||
+                button.getAttribute('aria-controls');
+
+            var input = document.getElementById(targetId);
+
+            if (!input) return;
+
+            // Hindari pemasangan event listener berulang.
+            if (button.dataset.passwordInitialized === 'true') return;
+
+            button.dataset.passwordInitialized = 'true';
+
+            button.addEventListener('click', function () {
+
+                var isVisible = input.type === 'text';
+                var showPassword = !isVisible;
+
+                input.type = showPassword ? 'text' : 'password';
+
+                // Animasi ikon mata.
+                button.classList.toggle('is-visible', showPassword);
+
+                // Aksesibilitas.
+                button.setAttribute(
+                    'aria-pressed',
+                    String(showPassword)
+                );
+
+                button.setAttribute(
+                    'aria-label',
+                    showPassword ? 'Hide password' : 'Show password'
+                );
+
+                button.setAttribute(
+                    'title',
+                    showPassword ? 'Hide password' : 'Show password'
+                );
+
+            });
+
+        });
     }
-  }
 
-  function initLoadingForms() {
-    document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
-      form.addEventListener('submit', function (event) {
-        // Cegah kirim ganda; tombol tidak di-disable agar data form tetap utuh.
-        if (form.dataset.submitting === 'true') {
-          event.preventDefault();
-          return;
+
+    /* =====================================================
+       FORM LOADING
+    ===================================================== */
+
+    function setLoading(form, isLoading) {
+
+        var button = form.querySelector('button[type="submit"]');
+
+        if (!button) return;
+
+        var label = button.querySelector('.btn__label');
+
+        if (label && !label.dataset.defaultText) {
+            label.dataset.defaultText = label.textContent;
         }
-        setLoading(form, true);
-      });
-    });
 
-    // Tombol Back (bfcache) bisa menampilkan halaman dalam keadaan loading.
-    window.addEventListener('pageshow', function (event) {
-      if (!event.persisted) { return; }
-      document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
-        setLoading(form, false);
-      });
-    });
-  }
+        form.dataset.submitting = String(isLoading);
 
-  /* ---------- Fokus awal ---------- */
-  function initAutofocus() {
-    // Di layar sentuh, fokus otomatis memunculkan keyboard dan menutupi form.
-    if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) { return; }
+        form.setAttribute('aria-busy', String(isLoading));
 
-    var fields = document.querySelectorAll('[data-autofocus]');
-    for (var i = 0; i < fields.length; i += 1) {
-      if (!fields[i].value) {
-        fields[i].focus();
-        return;
-      }
+        button.classList.toggle('is-loading', isLoading);
+
+        button.setAttribute('aria-disabled', String(isLoading));
+
+        if (label) {
+            label.textContent = isLoading
+                ? (button.dataset.loadingLabel || label.dataset.defaultText)
+                : label.dataset.defaultText;
+        }
     }
-  }
 
-  function init() {
-    initYear();
-    initPasswordToggle();
-    initLoadingForms();
-    initAutofocus();
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+    function initLoadingForms() {
+
+        document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
+
+            form.addEventListener('submit', function (event) {
+
+                if (form.dataset.submitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+
+                setLoading(form, true);
+
+            });
+
+        });
+
+
+        // Reset loading ketika halaman dipulihkan dari browser cache.
+        window.addEventListener('pageshow', function (event) {
+
+            if (!event.persisted) return;
+
+            document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
+                setLoading(form, false);
+            });
+
+        });
+
+    }
+
+
+    /* =====================================================
+       AUTOFOCUS
+    ===================================================== */
+
+    function initAutofocus() {
+
+        // Hindari keyboard otomatis muncul pada perangkat sentuh.
+        if (
+            !window.matchMedia ||
+            !window.matchMedia('(pointer: fine)').matches
+        ) {
+            return;
+        }
+
+        var fields = document.querySelectorAll('[data-autofocus]');
+
+        for (var i = 0; i < fields.length; i++) {
+
+            if (!fields[i].value) {
+                fields[i].focus();
+                return;
+            }
+
+        }
+
+    }
+
+
+    /* =====================================================
+       INITIALIZATION
+    ===================================================== */
+
+    function init() {
+
+        initYear();
+
+        initPasswordToggle();
+
+        initLoadingForms();
+
+        initAutofocus();
+
+    }
+
+
+    if (document.readyState === 'loading') {
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    } else {
+
+        init();
+
+    }
+
 })();

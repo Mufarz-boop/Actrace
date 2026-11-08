@@ -669,3 +669,89 @@ def get_journals_for_report(user_id, start_date, end_date):
             except Error:
                 logger.exception("Gagal menutup koneksi rekap jurnal.")
 
+# =====================================================
+# GET STUDENT GALLERY PHOTOS
+# =====================================================
+
+def get_gallery_photos(user_id, page=1, per_page=24):
+    """
+    Mengambil foto dokumentasi milik seorang peserta.
+
+    Foto hanya diambil dari jurnal yang dimiliki user_id.
+    Hasil diurutkan berdasarkan tanggal aktivitas terbaru.
+    """
+
+    if not user_id:
+        raise JournalSaveError("Sesi pengguna tidak valid.")
+
+    page = max(1, int(page))
+    per_page = max(1, min(int(per_page), 100))
+    offset = (page - 1) * per_page
+
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        # Total foto milik peserta
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM journal_photos AS jp
+            INNER JOIN journals AS j
+                ON j.journal_id = jp.journal_id
+            WHERE j.user_id = %s
+            """,
+            (user_id,),
+        )
+
+        total_photos = int(
+            (cursor.fetchone() or {}).get("total", 0)
+        )
+
+        # Data foto beserta tanggal dan jurnal asal
+        cursor.execute(
+            """
+            SELECT
+                jp.photo_id,
+                jp.journal_id,
+                jp.file_name,
+                jp.file_path,
+                jp.uploaded_at,
+                j.activity_date,
+                j.title
+            FROM journal_photos AS jp
+            INNER JOIN journals AS j
+                ON j.journal_id = jp.journal_id
+            WHERE j.user_id = %s
+            ORDER BY
+                j.activity_date DESC,
+                j.journal_id DESC,
+                jp.photo_id DESC
+            LIMIT %s OFFSET %s
+            """,
+            (user_id, per_page, offset),
+        )
+
+        photos = cursor.fetchall()
+
+        return photos, total_photos
+
+    except Error as exc:
+        logger.exception(
+            "Gagal mengambil Gallery. User ID: %s",
+            user_id,
+        )
+
+        raise JournalSaveError(
+            "Gallery gagal dimuat."
+        ) from exc
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if connection:
+            connection.close()

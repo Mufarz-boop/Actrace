@@ -1,0 +1,637 @@
+
+{% extends "student/base_student.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+
+<section class="profile-page">
+
+    <!-- PAGE HEADER -->
+    <header class="profile-heading">
+        <div>
+            <span class="section-eyebrow">STUDENT IDENTITY</span>
+            <h1>My Profile</h1>
+            <p>
+                Informasi identitas akademik dan perjalanan PKL-mu
+                dalam ACTRACE.
+            </p>
+        </div>
+    </header>
+
+
+    <!-- PROFILE OVERVIEW -->
+    <section class="profile-summary">
+
+        <div class="profile-summary__avatar">
+
+            {% if user.photo %}
+                <img
+                    src="{{ url_for('student.profile_photo') }}"
+                    alt="Foto profil {{ user.full_name }}"
+                >
+            {% else %}
+                <span>{{ user.full_name[0]|upper }}</span>
+            {% endif %}
+
+        </div>
+
+        <div class="profile-summary__info">
+
+            <h2>{{ user.full_name }}</h2>
+
+            <p>@{{ user.username }}</p>
+
+            <div class="profile-summary__meta">
+
+                <span class="profile-summary__badge">
+                    Student
+                </span>
+
+                <span class="profile-summary__code">
+                    {{ user.student_code }}
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="profile-summary__status">
+
+            <span>INTERNSHIP STATUS</span>
+
+            <strong class="internship-status internship-status--{{ internship_status.key }}">
+                {{ internship_status.label }}
+            </strong>
+
+        </div>
+
+    </section>
+
+
+    <!-- ACTIVITY OVERVIEW -->
+    <section class="profile-activity">
+
+        <article class="profile-activity__card">
+
+            <div class="profile-activity__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 4h14v16H5z"/>
+                    <path d="M8 8h8M8 12h8M8 16h5"/>
+                </svg>
+            </div>
+
+            <div>
+                <span>Total Journals</span>
+                <strong>
+                    {{ activity_stats.total_journals|default(0, true) }}
+                </strong>
+            </div>
+
+        </article>
+
+
+        <article class="profile-activity__card">
+
+            <div class="profile-activity__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                    <circle cx="8.5" cy="9" r="1.5"/>
+                    <path d="m21 15-5-5L5 20"/>
+                </svg>
+            </div>
+
+            <div>
+                <span>Documented Photos</span>
+                <strong>
+                    {{ activity_stats.total_photos|default(0, true) }}
+                </strong>
+            </div>
+
+        </article>
+
+
+        <article class="profile-activity__card">
+
+            <div class="profile-activity__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 7v5l3 2"/>
+                </svg>
+            </div>
+
+            <div>
+                <span>Latest Activity</span>
+
+                <strong class="profile-activity__date">
+                    {% if activity_stats.latest_activity %}
+                        {{ activity_stats.latest_activity.strftime('%d %b %Y') }}
+                    {% else %}
+                        No activity
+                    {% endif %}
+                </strong>
+            </div>
+
+        </article>
+
+    </section>
+
+
+    <!-- PROFILE FORM -->
+    <form
+        method="POST"
+        action="{{ url_for('student.profile') }}"
+        enctype="multipart/form-data"
+        class="profile-form"
+    >
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+
+        <!-- =========================================
+             PERSONAL IDENTITY
+        ========================================== -->
+
+        <section class="profile-card">
+
+            <header class="profile-card__heading">
+
+                <div>
+                    <span class="section-eyebrow">01 / IDENTITY</span>
+                    <h2>Personal Identity</h2>
+                    <p>
+                        Identitas pribadi yang terhubung
+                        dengan akun ACTRACE.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <!-- PROFILE PHOTO -->
+            <div class="profile-photo-field">
+
+                <div class="profile-photo-field__preview">
+
+                    {% if user.photo %}
+                        <img
+                            src="{{ url_for('student.profile_photo') }}"
+                            alt="Foto profil saat ini"
+                        >
+                    {% else %}
+                        <span>{{ user.full_name[0]|upper }}</span>
+                    {% endif %}
+
+                </div>
+
+
+                <div class="profile-photo-field__content">
+
+                    <label for="profile-photo">
+                        Profile Photo
+                    </label>
+
+                    <p>
+                        JPEG, PNG, atau WebP. Maksimal 2 MB.
+                    </p>
+
+                    <input
+                        type="file"
+                        name="photo"
+                        id="profile-photo"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    >
+
+                    {% if user.photo %}
+                        <label class="profile-remove-photo">
+
+                            <input
+                                type="checkbox"
+                                name="remove_photo"
+                                value="1"
+                            >
+
+                            Remove current photo
+
+                        </label>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-form__divider"></div>
+
+
+            <div class="profile-field-grid">
+
+                <div class="profile-form__group">
+
+                    <label for="student-code">
+                        Student Code
+                    </label>
+
+                    <input
+                        type="text"
+                        id="student-code"
+                        value="{{ user.student_code }}"
+                        disabled
+                    >
+
+                    <small>
+                        Identitas tetap yang diberikan kepada siswa.
+                    </small>
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="full-name">
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="full-name"
+                        name="full_name"
+                        value="{{ user.full_name }}"
+                        maxlength="100"
+                        autocomplete="name"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="username">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="{{ user.username }}"
+                        minlength="3"
+                        maxlength="50"
+                        pattern="[A-Za-z0-9._-]+"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="email">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ user.email }}"
+                        maxlength="100"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================
+             ACADEMIC INFORMATION
+        ========================================== -->
+
+        <section class="profile-card">
+
+            <header class="profile-card__heading">
+
+                <div>
+                    <span class="section-eyebrow">02 / ACADEMIC</span>
+                    <h2>Academic Information</h2>
+                    <p>
+                        Informasi pendidikan dan identitas akademik siswa.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <div class="profile-field-grid">
+
+                <div class="profile-form__group profile-field-grid__full">
+
+                    <label for="school-name">
+                        School Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="school-name"
+                        name="school_name"
+                        value="{{ user.school_name or '' }}"
+                        maxlength="150"
+                        placeholder="Enter your school name"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="class-name">
+                        Class
+                    </label>
+
+                    <input
+                        type="text"
+                        id="class-name"
+                        name="class_name"
+                        value="{{ user.class_name or '' }}"
+                        maxlength="50"
+                        placeholder="e.g. XII RPL 1"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="major">
+                        Major / Study Program
+                    </label>
+
+                    <input
+                        type="text"
+                        id="major"
+                        name="major"
+                        value="{{ user.major or '' }}"
+                        maxlength="100"
+                        placeholder="Enter your major"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="academic-year">
+                        Academic Year
+                    </label>
+
+                    <input
+                        type="text"
+                        id="academic-year"
+                        name="academic_year"
+                        value="{{ user.academic_year or '' }}"
+                        maxlength="20"
+                        placeholder="e.g. 2026/2027"
+                    >
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================
+             INTERNSHIP INFORMATION
+        ========================================== -->
+
+        <section class="profile-card">
+
+            <header class="profile-card__heading">
+
+                <div>
+                    <span class="section-eyebrow">03 / INTERNSHIP</span>
+                    <h2>Internship Placement</h2>
+                    <p>
+                        Informasi tempat pelaksanaan dan pembimbing PKL.
+                    </p>
+                </div>
+
+                <strong class="internship-status internship-status--{{ internship_status.key }}">
+                    {{ internship_status.label }}
+                </strong>
+
+            </header>
+
+
+            <div class="profile-field-grid">
+
+                <div class="profile-form__group profile-field-grid__full">
+
+                    <label for="internship-company">
+                        Company / Organization
+                    </label>
+
+                    <input
+                        type="text"
+                        id="internship-company"
+                        name="internship_company"
+                        value="{{ user.internship_company or '' }}"
+                        maxlength="150"
+                        placeholder="Enter internship company"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="internship-industry">
+                        Industry
+                    </label>
+
+                    <input
+                        type="text"
+                        id="internship-industry"
+                        name="internship_industry"
+                        value="{{ user.internship_industry or '' }}"
+                        maxlength="100"
+                        placeholder="e.g. Information Technology"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="internship-address">
+                        Company Address
+                    </label>
+
+                    <input
+                        type="text"
+                        id="internship-address"
+                        name="internship_address"
+                        value="{{ user.internship_address or '' }}"
+                        maxlength="255"
+                        placeholder="Enter company address"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="supervisor-name">
+                        Field Supervisor
+                    </label>
+
+                    <input
+                        type="text"
+                        id="supervisor-name"
+                        name="supervisor_name"
+                        value="{{ user.supervisor_name or '' }}"
+                        maxlength="100"
+                        placeholder="Supervisor's name"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="supervisor-position">
+                        Supervisor Position
+                    </label>
+
+                    <input
+                        type="text"
+                        id="supervisor-position"
+                        name="supervisor_position"
+                        value="{{ user.supervisor_position or '' }}"
+                        maxlength="100"
+                        placeholder="e.g. IT Supervisor"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="internship-start-date">
+                        Internship Start Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="internship-start-date"
+                        name="internship_start_date"
+                        value="{{ user.internship_start_date.strftime('%Y-%m-%d') if user.internship_start_date else '' }}"
+                    >
+
+                </div>
+
+
+                <div class="profile-form__group">
+
+                    <label for="internship-end-date">
+                        Internship End Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="internship-end-date"
+                        name="internship_end_date"
+                        value="{{ user.internship_end_date.strftime('%Y-%m-%d') if user.internship_end_date else '' }}"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-information-note">
+                Informasi akademik dan penempatan PKL diisi oleh siswa.
+                Pastikan seluruh informasi sesuai dengan data sekolah
+                dan tempat pelaksanaan PKL.
+            </div>
+
+        </section>
+
+
+        <!-- =========================================
+             ACCOUNT INFORMATION
+        ========================================== -->
+
+        <section class="profile-card">
+
+            <header class="profile-card__heading">
+
+                <div>
+                    <span class="section-eyebrow">04 / ACCOUNT</span>
+                    <h2>Account Information</h2>
+                    <p>
+                        Informasi waktu pembuatan dan pembaruan akun.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <div class="profile-account-info">
+
+                <div>
+                    <span>Account Created</span>
+
+                    <strong>
+                        {{ user.created_at.strftime('%d %B %Y') if user.created_at else '-' }}
+                    </strong>
+                </div>
+
+
+                <div>
+                    <span>Last Updated</span>
+
+                    <strong>
+                        {{ user.updated_at.strftime('%d %B %Y, %H:%M') if user.updated_at else '-' }}
+                    </strong>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- FORM ACTIONS -->
+        <div class="profile-form__actions">
+
+            <a
+                href="{{ url_for('student.dashboard') }}"
+                class="profile-button profile-button--secondary"
+            >
+                Cancel
+            </a>
+
+            <button
+                type="submit"
+                class="profile-button profile-button--primary"
+            >
+                Save Profile
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+{% endblock %}

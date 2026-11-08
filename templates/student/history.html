@@ -1,0 +1,358 @@
+{% extends "student/base_student.html" %}
+
+{% block title %}Journal History{% endblock %}
+
+{% block content %}
+
+<section class="history-heading">
+
+    <div>
+        <span class="section-eyebrow">
+            PERSONAL RECORDS
+        </span>
+
+        <h1>Journal History</h1>
+
+        <p>
+            Telusuri kembali seluruh catatan kegiatan PKL
+            yang pernah kamu simpan.
+        </p>
+    </div>
+
+    <a
+        href="{{ url_for('student.add_journal') }}"
+        class="add-journal-button add-journal-button--submit"
+    >
+        <span aria-hidden="true">＋</span>
+        <span>Add Journal</span>
+    </a>
+
+</section>
+
+
+<!-- SUMMARY -->
+
+<section
+    class="history-summary"
+    aria-label="Ringkasan riwayat"
+>
+
+    <div class="history-summary__icon">
+        <svg class="icon">
+            <use href="#icon-calendar"></use>
+        </svg>
+    </div>
+
+    <div>
+
+        <span class="history-summary__label">
+            JURNAL DITEMUKAN
+        </span>
+
+        <strong>{{ total_journals }}</strong>
+
+        <span class="history-summary__description">
+            catatan sesuai pencarian
+        </span>
+
+    </div>
+
+</section>
+
+
+<!-- HISTORY PANEL -->
+
+<section
+    class="history-panel"
+    aria-labelledby="history-list-title"
+>
+
+    <div class="history-panel__header">
+
+        <div>
+
+            <span class="section-eyebrow">
+                ACTIVITY TIMELINE
+            </span>
+
+            <h2 id="history-list-title">
+                Riwayat Kegiatan
+            </h2>
+
+        </div>
+
+        <a
+            class="history-reset"
+            href="{{ url_for('student.history') }}"
+        >
+            Reset filter
+        </a>
+
+    </div>
+
+
+    <!-- FILTER -->
+
+    <form
+        class="history-filters"
+        method="GET"
+        action="{{ url_for('student.history') }}"
+    >
+
+        <label class="history-field history-field--search">
+
+            <span>Kata kunci</span>
+
+            <input
+                type="search"
+                name="q"
+                value="{{ keyword }}"
+                placeholder="Cari judul atau deskripsi..."
+                maxlength="100"
+            >
+
+        </label>
+
+
+        <label class="history-field">
+
+            <span>Dari tanggal</span>
+
+            <input
+                type="date"
+                name="start_date"
+                value="{{ start_date }}"
+            >
+
+        </label>
+
+
+        <label class="history-field">
+
+            <span>Sampai tanggal</span>
+
+            <input
+                type="date"
+                name="end_date"
+                value="{{ end_date }}"
+            >
+
+        </label>
+
+
+        <button
+            type="submit"
+            class="history-filter-button"
+        >
+            Terapkan
+        </button>
+
+    </form>
+
+
+    <!-- ERROR -->
+
+    {% if error %}
+
+        <div
+            class="history-message history-message--error"
+            role="alert"
+        >
+            {{ error }}
+        </div>
+
+
+    <!-- JOURNAL LIST -->
+
+    {% elif journals %}
+
+        <div class="history-list">
+
+            {% for journal in journals %}
+
+                <article class="history-item">
+
+                    <div class="history-item__date">
+
+                        <strong>
+                            {{ journal.activity_date.strftime('%d') }}
+                        </strong>
+
+                        <span>
+                            {{ journal.activity_date.strftime('%b %Y') }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="history-item__content">
+
+                        <div class="history-item__meta">
+
+                            <span>
+                                {{ journal.activity_date.strftime('%A') }}
+                            </span>
+
+                            {% if journal.photo_count %}
+
+                                <span class="history-photo-count">
+                                    {{ journal.photo_count }} foto
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <h3>
+                            {{ journal.title }}
+                        </h3>
+
+
+                        <p>
+                            {{ journal.description|truncate(230, True, '…') }}
+                        </p>
+
+
+                        <a
+                            href="{{ url_for(
+                                'student.detail_journal',
+                                journal_id=journal.journal_id
+                            ) }}"
+                        >
+                            Lihat detail
+                            <span aria-hidden="true">→</span>
+                        </a>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- PAGINATION -->
+
+        {% if total_pages > 1 %}
+
+            <nav
+                class="history-pagination"
+                aria-label="Navigasi halaman riwayat"
+            >
+
+                {% if page > 1 %}
+
+                    <a
+                        href="{{ url_for(
+                            'student.history',
+                            q=keyword,
+                            start_date=start_date,
+                            end_date=end_date,
+                            page=page-1
+                        ) }}"
+                        rel="prev"
+                    >
+                        Sebelumnya
+                    </a>
+
+                {% else %}
+
+                    <span class="is-disabled">
+                        Sebelumnya
+                    </span>
+
+                {% endif %}
+
+
+                <span>
+                    Halaman
+                    <strong>{{ page }}</strong>
+                    dari
+                    <strong>{{ total_pages }}</strong>
+                </span>
+
+
+                {% if page < total_pages %}
+
+                    <a
+                        href="{{ url_for(
+                            'student.history',
+                            q=keyword,
+                            start_date=start_date,
+                            end_date=end_date,
+                            page=page+1
+                        ) }}"
+                        rel="next"
+                    >
+                        Berikutnya
+                    </a>
+
+                {% else %}
+
+                    <span class="is-disabled">
+                        Berikutnya
+                    </span>
+
+                {% endif %}
+
+            </nav>
+
+        {% endif %}
+
+
+    <!-- EMPTY STATE -->
+
+    {% else %}
+
+        <div class="history-empty">
+
+            <div class="history-empty__icon">
+
+                <svg class="icon">
+                    <use href="#icon-journal"></use>
+                </svg>
+
+            </div>
+
+
+            <h3>
+                Belum ada riwayat yang cocok
+            </h3>
+
+
+            <p>
+
+                {% if keyword or start_date or end_date %}
+
+                    Coba ubah kata kunci atau rentang tanggal pencarianmu.
+
+                {% else %}
+
+                    Jurnal yang kamu buat akan muncul di sini
+                    sebagai riwayat kegiatan.
+
+                {% endif %}
+
+            </p>
+
+
+            {% if not keyword and not start_date and not end_date %}
+
+                <a
+                    href="{{ url_for('student.add_journal') }}"
+                    class="add-journal-button add-journal-button--submit"
+                >
+                    Buat jurnal pertama
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}
