@@ -1,4 +1,3 @@
-
 import logging
 import uuid
 from pathlib import Path
@@ -24,6 +23,10 @@ class PhotoValidationError(Exception):
     """Kesalahan validasi foto jurnal."""
 
 
+# =====================================================
+# VALIDATE PHOTO
+# =====================================================
+
 def validate_photo(file: FileStorage):
     """
     Memvalidasi satu file foto berdasarkan:
@@ -33,14 +36,18 @@ def validate_photo(file: FileStorage):
     """
 
     if not file or not file.filename:
-        raise PhotoValidationError("File foto tidak valid.")
+        raise PhotoValidationError(
+            "File foto tidak valid."
+        )
 
     file.stream.seek(0, 2)
     file_size = file.stream.tell()
     file.stream.seek(0)
 
     if file_size <= 0:
-        raise PhotoValidationError("File foto tidak boleh kosong.")
+        raise PhotoValidationError(
+            "File foto tidak boleh kosong."
+        )
 
     if file_size > MAX_PHOTO_SIZE:
         raise PhotoValidationError(
@@ -69,6 +76,7 @@ def validate_photo(file: FileStorage):
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
     ) as exc:
+
         raise PhotoValidationError(
             "File yang diunggah bukan gambar yang valid."
         ) from exc
@@ -81,9 +89,14 @@ def validate_photo(file: FileStorage):
     }
 
 
+# =====================================================
+# SAVE JOURNAL PHOTOS
+# =====================================================
+
 def save_journal_photos(files, journal_id):
     """
     Menyimpan foto ke direktori privat:
+
     instance/uploads/journal_photos/<journal_id>/
 
     Mengembalikan metadata foto untuk disimpan ke database.
@@ -106,17 +119,21 @@ def save_journal_photos(files, journal_id):
         current_app.config["UPLOAD_FOLDER"]
     )
 
-    journal_directory = upload_root / str(journal_id)
+    journal_directory = (
+        upload_root / str(journal_id)
+    )
 
     saved_files = []
 
     try:
+
         journal_directory.mkdir(
             parents=True,
-            exist_ok=True
+            exist_ok=True,
         )
 
         for file in selected_files:
+
             validation = validate_photo(file)
 
             stored_name = (
@@ -124,7 +141,9 @@ def save_journal_photos(files, journal_id):
                 f"{validation['extension']}"
             )
 
-            destination = journal_directory / stored_name
+            destination = (
+                journal_directory / stored_name
+            )
 
             file.stream.seek(0)
             file.save(destination)
@@ -140,9 +159,15 @@ def save_journal_photos(files, journal_id):
         return saved_files
 
     except Exception:
+
         delete_saved_photos(saved_files)
+
         raise
 
+
+# =====================================================
+# DELETE SAVED PHOTOS
+# =====================================================
 
 def delete_saved_photos(photos):
     """
@@ -151,29 +176,99 @@ def delete_saved_photos(photos):
     """
 
     for photo in photos:
+
         try:
+
             path = photo.get("absolute_path")
 
             if path and Path(path).is_file():
                 Path(path).unlink()
 
         except OSError:
+
             logger.exception(
                 "Gagal menghapus foto jurnal."
             )
 
+
+# =====================================================
+# DELETE PHOTO FILES
+# =====================================================
+
 def delete_photo_files(file_paths):
     """
     Menghapus file foto setelah transaksi database berhasil.
-    Semua path dibatasi ke direktori upload ACTRACE.
-    """
-    upload_root = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
 
-    for relative_path in file_paths:
+    Keamanan:
+    - Seluruh path dibatasi ke direktori upload ACTRACE.
+    - Path traversal ditolak.
+    - Symlink yang mengarah keluar direktori upload ditolak.
+
+    Returns:
+        list:
+            Daftar path file yang gagal dihapus.
+            List kosong berarti seluruh file berhasil
+            dihapus atau memang sudah tidak tersedia.
+    """
+
+    upload_folder = current_app.config.get(
+        "UPLOAD_FOLDER"
+    )
+
+    if not upload_folder:
+
+        logger.error(
+            "UPLOAD_FOLDER belum dikonfigurasi."
+        )
+
+        return list(file_paths or [])
+
+    upload_root = Path(
+        upload_folder
+    ).resolve()
+
+    failed_paths = []
+
+    for relative_path in file_paths or []:
+
         try:
-            candidate = (upload_root / str(relative_path)).resolve()
+
+            if not isinstance(relative_path, str):
+                raise ValueError(
+                    "Path foto tidak valid."
+                )
+
+            if not relative_path.strip():
+                raise ValueError(
+                    "Path foto kosong."
+                )
+
+            candidate = (
+                upload_root / relative_path
+            ).resolve()
+
+            # Pastikan file tetap berada
+            # di dalam direktori upload.
             candidate.relative_to(upload_root)
+
+            # File yang sudah tidak tersedia
+            # dianggap sudah bersih.
             if candidate.is_file():
                 candidate.unlink()
-        except (ValueError, OSError, TypeError):
-            logger.exception("Gagal menghapus file foto jurnal.")
+
+        except (
+            ValueError,
+            OSError,
+            TypeError,
+        ):
+
+            failed_paths.append(
+                str(relative_path)
+            )
+
+            logger.exception(
+                "Gagal menghapus file foto jurnal: %s",
+                relative_path,
+            )
+
+    return failed_paths

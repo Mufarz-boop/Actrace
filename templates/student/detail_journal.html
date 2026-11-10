@@ -44,6 +44,8 @@
 
                 <div class="page-actions">
 
+                    <!-- BACK TO JOURNALS -->
+
                     <a
                         href="{{ url_for('student.journals') }}"
                         class="btn btn-secondary"
@@ -52,13 +54,51 @@
                         <span>Back to Journals</span>
                     </a>
 
+
+                    <!-- EDIT JOURNAL -->
+
                     <a
-                        href="{{ url_for('student.edit_journal', journal_id=journal.journal_id) }}"
+                        href="{{ url_for(
+                            'student.edit_journal',
+                            journal_id=journal.journal_id
+                        ) }}"
                         class="btn btn-primary"
                     >
                         <i class="fas fa-pen"></i>
                         <span>Edit Journal</span>
                     </a>
+
+
+                    <!-- DELETE JOURNAL -->
+
+                    <form
+                        method="POST"
+                        action="{{ url_for(
+                            'student.delete_journal_route',
+                            journal_id=journal.journal_id
+                        ) }}"
+                        onsubmit="
+                            return confirm(
+                                'Apakah kamu yakin ingin menghapus jurnal ini secara permanen beserta seluruh dokumentasi fotonya? Tindakan ini tidak dapat dibatalkan.'
+                            );
+                        "
+                    >
+
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="btn btn-danger"
+                        >
+                            <i class="fas fa-trash-alt"></i>
+                            <span>Delete Journal</span>
+                        </button>
+
+                    </form>
 
                 </div>
 

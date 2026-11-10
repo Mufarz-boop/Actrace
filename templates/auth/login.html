@@ -224,6 +224,7 @@
                         action="{{ url_for('auth.login') }}"
                         autocomplete="on"
                         data-loading-form
+                        data-login-form
                     >
 
                         <!-- CSRF PROTECTION -->
@@ -411,6 +412,11 @@
 
 
     <!-- LOCAL JAVASCRIPT -->
+    <script
+        src="{{ url_for('static', filename='js/login-animation.js') }}"
+        defer
+    ></script>
+
     <script
         src="{{ url_for('static', filename='js/main.js') }}"
         defer

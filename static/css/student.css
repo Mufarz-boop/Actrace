@@ -5559,3 +5559,815 @@ a.quick-link:hover .quick-link__arrow {
     }
 
 }
+
+/* =====================================================
+   JOURNAL DELETE ACTION
+===================================================== */
+
+.journal-detail-page .page-actions form {
+    display: flex;
+    margin: 0;
+}
+
+.journal-detail-page .page-actions .btn-danger {
+    color: #fff;
+    background: #B93838;
+    border: 1px solid #B93838;
+    cursor: pointer;
+}
+
+.journal-detail-page .page-actions .btn-danger:hover {
+    background: #982D2D;
+    border-color: #982D2D;
+}
+
+.journal-delete-form {
+    margin-top: 9px;
+}
+
+.journal-delete-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    color: #B93838;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.journal-delete-button:hover {
+    color: #842626;
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   LOGOUT TRANSITION  (Circular Iris Closing)
+   Namespace: .logout-transition
+   Timeline (ms): 0-500 aktif | 500-1800 iris menutup | 1800-2700 logo
+                  2700-3500 pesan | 3500 form dikirim (logout-animation.js)
+   ========================================================================== */
+
+/* Penjaga tombol Back: sembunyikan dashboard lama sebelum diganti ke login. */
+html.logout-transition-guard body {
+    visibility: hidden;
+}
+
+.logout-transition {
+    --lt-navy: var(--color-navy-dark, #0E2240);
+    --lt-teal: var(--color-teal, #247C83);
+    --lt-amber: var(--color-amber, #E8A64A);
+
+    /* Diameter lubang iris: cukup besar untuk melewati sudut viewport. */
+    --lt-open: 150vmax;
+    --lt-spread: 100vmax;
+
+    --lt-iris-delay: 500ms;
+    --lt-iris-duration: 1300ms;
+    --lt-logo-delay: 1800ms;
+    --lt-message-delay: 2700ms;
+
+    --lt-logo-size: 88px;
+    --lt-logo-height: 136px;
+
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: none;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: none;
+    cursor: progress;
+    outline: none;
+
+    color: #FFFFFF;
+    font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.logout-transition.is-active {
+    display: block;
+}
+
+/* Tahap 1: dashboard meredup halus sebelum iris bergerak. */
+.logout-transition::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--lt-navy);
+    opacity: 0;
+    animation: logout-transition-dim 500ms ease-out both;
+}
+
+/* Tahap 2: lubang transparan menyempit; bayangan navy menutup sisanya. */
+.logout-transition__iris {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--lt-open);
+    height: var(--lt-open);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow:
+        0 0 0 2px rgba(36, 124, 131, 0.95),
+        0 0 0 var(--lt-spread) var(--lt-navy);
+    animation: logout-transition-iris var(--lt-iris-duration)
+        cubic-bezier(0.65, 0, 0.35, 1) var(--lt-iris-delay) both;
+}
+
+.logout-transition__content {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding-inline: 24px;
+}
+
+/* Tahap 3: logo tepat di tengah viewport. */
+.logout-transition__logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    opacity: 0;
+    transform: scale(0.9);
+    animation: logout-transition-logo 600ms cubic-bezier(0.22, 1, 0.36, 1)
+        var(--lt-logo-delay) both;
+}
+
+.logout-transition__mark {
+    display: block;
+    width: var(--lt-logo-size);
+    height: var(--lt-logo-size);
+    overflow: visible;
+}
+
+.logout-transition__trace {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: logout-transition-trace 700ms cubic-bezier(0.65, 0, 0.35, 1)
+        calc(var(--lt-logo-delay) + 150ms) both;
+}
+
+.logout-transition__dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(0);
+    animation: logout-transition-dot 320ms cubic-bezier(0.34, 1.56, 0.64, 1)
+        calc(var(--lt-logo-delay) + 600ms) both;
+}
+
+.logout-transition__wordmark {
+    margin: 0;
+    padding-inline-start: 0.24em; /* menyeimbangkan letter-spacing di ujung kanan */
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.24em;
+}
+
+/* Tahap 4: pesan penutup di bawah logo. */
+.logout-transition__message {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% + (var(--lt-logo-height) / 2) + 30px);
+    margin: 0;
+    padding-inline: 24px;
+    padding-inline-start: calc(24px + 0.42em);
+
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.42em;
+    text-align: center;
+    white-space: nowrap;
+
+    opacity: 0;
+    transform: translateY(10px);
+    animation: logout-transition-message 800ms cubic-bezier(0.22, 1, 0.36, 1)
+        var(--lt-message-delay) both;
+}
+
+.logout-transition__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Tombol Sign Out saat loading. */
+.logout-button.is-loading,
+.logout-button:disabled {
+    cursor: progress;
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.logout-button.is-loading .icon {
+    opacity: 0.45;
+}
+
+.logout-button.is-loading::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--color-teal, #247C83);
+    border-radius: 50%;
+    animation: logout-transition-spin 700ms linear infinite;
+}
+
+@keyframes logout-transition-dim {
+    from { opacity: 0; }
+    to   { opacity: 0.22; }
+}
+
+@keyframes logout-transition-iris {
+    from {
+        width: var(--lt-open);
+        height: var(--lt-open);
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0.95),
+            0 0 0 var(--lt-spread) var(--lt-navy);
+    }
+    80% {
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0.95),
+            0 0 0 var(--lt-spread) var(--lt-navy);
+    }
+    to {
+        width: 0;
+        height: 0;
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0),
+            0 0 0 var(--lt-spread) var(--lt-navy);
+    }
+}
+
+@keyframes logout-transition-logo {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes logout-transition-trace {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+@keyframes logout-transition-dot {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
+@keyframes logout-transition-message {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes logout-transition-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes logout-transition-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .logout-transition {
+        --lt-logo-size: 72px;
+        --lt-logo-height: 116px;
+    }
+
+    .logout-transition__logo {
+        gap: 14px;
+    }
+
+    .logout-transition__wordmark {
+        font-size: 17px;
+    }
+
+    .logout-transition__message {
+        top: calc(50% + (var(--lt-logo-height) / 2) + 26px);
+        font-size: 11px;
+        letter-spacing: 0.36em;
+        padding-inline-start: calc(24px + 0.36em);
+    }
+}
+
+@media (max-width: 340px) {
+    .logout-transition__message {
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        padding-inline-start: calc(24px + 0.3em);
+    }
+}
+
+/* Reduced motion: tanpa gerakan iris/skala/gambar garis; hanya fade singkat. */
+@media (prefers-reduced-motion: reduce) {
+    .logout-transition.is-active {
+        animation: logout-transition-fade 250ms ease-out both;
+    }
+
+    .logout-transition::before {
+        animation: none;
+        opacity: 1;
+    }
+
+    .logout-transition__iris {
+        animation: none;
+        width: 0;
+        height: 0;
+        box-shadow: 0 0 0 var(--lt-spread) var(--lt-navy);
+    }
+
+    .logout-transition__logo,
+    .logout-transition__message {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .logout-transition__trace {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+
+    .logout-transition__dot {
+        animation: none;
+        transform: scale(1);
+    }
+
+    .logout-button.is-loading::after {
+        animation: none;
+    }
+}
+
+/* ==========================================================================
+   LOGIN TRANSITION  (Circular Iris Opening)
+   Namespace: .login-transition  |  Kebalikan visual dari .logout-transition
+   Timeline (ms): 0-500 overlay navy | 500-1800 iris membuka (dashboard
+                  terlihat) | 1800-2700 brand reveal | 2700-3500 logo
+                  memudar lalu overlay dilepas (login-animation.js)
+   ========================================================================== */
+
+/* Dashboard disembunyikan sampai overlay navy siap, agar tidak berkedip. */
+html.login-reveal-pending {
+    background: var(--color-navy-dark, #0E2240);
+}
+
+html.login-reveal-pending body {
+    visibility: hidden;
+}
+
+html.login-reveal-pending .login-transition {
+    display: block;
+    visibility: visible;
+}
+
+.login-transition {
+    --li-navy: var(--color-navy-dark, #0E2240);
+    --li-teal: var(--color-teal, #247C83);
+    --li-amber: var(--color-amber, #E8A64A);
+
+    /* Diameter lubang iris: cukup besar untuk melewati sudut viewport. */
+    --li-open: 150vmax;
+    --li-spread: 100vmax;
+
+    --li-iris-delay: 500ms;
+    --li-iris-duration: 1300ms;
+    --li-logo-delay: 1800ms;
+    --li-exit-delay: 2700ms;
+    --li-exit-duration: 700ms;
+
+    --li-badge-size: 176px;
+    --li-logo-size: 56px;
+
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: none;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: none;
+    cursor: progress;
+    outline: none;
+
+    color: #FFFFFF;
+    font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.login-transition.is-active {
+    display: block;
+}
+
+/* Tahap 1-2: layar tertutup navy (lubang 0); lubang melebar dari tengah. */
+.login-transition__iris {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow:
+        0 0 0 2px rgba(36, 124, 131, 0),
+        0 0 0 var(--li-spread) var(--li-navy);
+}
+
+.login-transition.is-active .login-transition__iris {
+    animation: login-transition-iris var(--li-iris-duration)
+        cubic-bezier(0.65, 0, 0.35, 1) var(--li-iris-delay) both;
+}
+
+/* Tahap 3-4: wadah logo; memudar halus pada tahap Dashboard Reveal. */
+.login-transition__content {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding-inline: 24px;
+    pointer-events: none;
+}
+
+.login-transition.is-active .login-transition__content {
+    animation: login-transition-exit var(--li-exit-duration)
+        cubic-bezier(0.4, 0, 0.8, 0.4) var(--li-exit-delay) forwards;
+}
+
+/* Medali navy bulat: menjaga logo tetap terbaca di atas dashboard. */
+.login-transition__badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: var(--li-badge-size);
+    height: var(--li-badge-size);
+    border-radius: 50%;
+
+    background: radial-gradient(
+        circle at 50% 36%,
+        #19396A 0%,
+        var(--li-navy) 72%
+    );
+    box-shadow:
+        0 0 0 1.5px rgba(36, 124, 131, 0.9),
+        0 0 0 10px rgba(14, 34, 64, 0.32),
+        0 24px 60px rgba(14, 34, 64, 0.45);
+
+    opacity: 0;
+    transform: scale(0.88);
+}
+
+.login-transition.is-active .login-transition__badge {
+    animation: login-transition-badge 600ms cubic-bezier(0.22, 1, 0.36, 1)
+        var(--li-logo-delay) both;
+}
+
+.login-transition__mark {
+    display: block;
+    width: var(--li-logo-size);
+    height: var(--li-logo-size);
+    overflow: visible;
+}
+
+.login-transition__trace {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+}
+
+.login-transition.is-active .login-transition__trace {
+    animation: login-transition-trace 700ms cubic-bezier(0.65, 0, 0.35, 1)
+        calc(var(--li-logo-delay) + 150ms) both;
+}
+
+.login-transition__dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(0);
+}
+
+.login-transition.is-active .login-transition__dot {
+    animation: login-transition-dot 320ms cubic-bezier(0.34, 1.56, 0.64, 1)
+        calc(var(--li-logo-delay) + 600ms) both;
+}
+
+.login-transition__wordmark {
+    margin: 0;
+    padding-inline-start: 0.24em; /* menyeimbangkan letter-spacing di ujung kanan */
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.24em;
+}
+
+.login-transition__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@keyframes login-transition-iris {
+    from {
+        width: 0;
+        height: 0;
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0),
+            0 0 0 var(--li-spread) var(--li-navy);
+    }
+    20% {
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0.95),
+            0 0 0 var(--li-spread) var(--li-navy);
+    }
+    to {
+        width: var(--li-open);
+        height: var(--li-open);
+        box-shadow:
+            0 0 0 2px rgba(36, 124, 131, 0),
+            0 0 0 var(--li-spread) var(--li-navy);
+    }
+}
+
+@keyframes login-transition-badge {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes login-transition-trace {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+@keyframes login-transition-dot {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
+@keyframes login-transition-exit {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes login-transition-fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@media (max-width: 600px) {
+    .login-transition {
+        --li-badge-size: 148px;
+        --li-logo-size: 48px;
+    }
+
+    .login-transition__badge {
+        gap: 12px;
+    }
+
+    .login-transition__wordmark {
+        font-size: 13px;
+    }
+}
+
+/* Reduced motion: tanpa gerakan iris/skala/gambar garis; logo tampil
+   statis di atas layar navy sebentar, lalu overlay memudar. */
+@media (prefers-reduced-motion: reduce) {
+    .login-transition.is-active {
+        animation: login-transition-fade-out 300ms ease-out 900ms both;
+    }
+
+    .login-transition.is-active .login-transition__iris,
+    .login-transition.is-active .login-transition__content,
+    .login-transition.is-active .login-transition__badge,
+    .login-transition.is-active .login-transition__trace,
+    .login-transition.is-active .login-transition__dot {
+        animation: none;
+    }
+
+    .login-transition__badge {
+        opacity: 1;
+        transform: none;
+    }
+
+    .login-transition__trace {
+        stroke-dashoffset: 0;
+    }
+
+    .login-transition__dot {
+        transform: scale(1);
+    }
+}
+
+/* ==========================================================================
+   MOTION SYSTEM
+   Bahasa gerak bersama untuk Staggered Dashboard Reveal dan
+   Animated Navigation Indicator. Hanya memakai transform + opacity.
+   ========================================================================== */
+
+:root {
+    --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --motion-distance: 12px;          /* jarak translasi vertikal reveal  */
+    --motion-reveal-duration: 520ms;  /* 450-600ms                        */
+    --motion-reveal-stagger: 70ms;    /* 60-90ms                          */
+    --motion-container-duration: 400ms;
+    --motion-nav-duration: 300ms;     /* 250-350ms                        */
+    --motion-hover-duration: 180ms;   /* 150-200ms                        */
+}
+
+
+/* ---------- Navigasi: transisi hover/warna memakai easing yang sama ---- */
+
+.nav-link {
+    transition:
+        background var(--motion-hover-duration) var(--motion-ease),
+        color var(--motion-hover-duration) var(--motion-ease);
+}
+
+.nav-link .icon {
+    transition: color var(--motion-hover-duration) var(--motion-ease);
+}
+
+
+/* ==========================================================================
+   STAGGERED DASHBOARD REVEAL
+   Dipicu oleh static/js/dashboard-reveal.js.
+
+   - Keadaan awal (tersembunyi) HANYA berlaku bila <html> memiliki kelas
+     .js-reveal, yang dipasang skrip di <head> dashboard.html. Tanpa
+     JavaScript atau dengan prefers-reduced-motion, kelas itu tidak ada
+     sehingga dashboard langsung tampil.
+   - Animasi memakai fill-mode "backwards": setelah selesai tidak ada gaya
+     yang tertinggal, jadi hover dan interaksi widget tidak terpengaruh.
+   - Kelas dilepas setelah reveal selesai, sehingga tidak bisa terulang
+     oleh modal, dropdown, atau pembaruan isi komponen.
+   ========================================================================== */
+
+html.js-reveal:not(.is-revealing) .page-content,
+html.js-reveal:not(.is-revealing) [data-stagger] {
+    opacity: 0;
+}
+
+@keyframes actrace-reveal-container {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes actrace-reveal-item {
+    from {
+        opacity: 0;
+        transform: translate3d(0, var(--motion-distance), 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* Fase 1 - kontainer dashboard: fade halus saja. */
+html.js-reveal.is-revealing .page-content {
+    animation: actrace-reveal-container var(--motion-container-duration)
+               var(--motion-ease) backwards;
+}
+
+/* Fase 2-5 - item per kelompok, urutan lewat --reveal-index. */
+html.js-reveal.is-revealing [data-stagger] {
+    animation: actrace-reveal-item var(--motion-reveal-duration)
+               var(--motion-ease) backwards;
+    animation-delay: calc(var(--reveal-index, 0) * var(--motion-reveal-stagger));
+}
+
+
+/* ==========================================================================
+   ANIMATED NAVIGATION INDICATOR
+   Satu elemen .nav-indicator dibuat oleh static/js/nav-indicator.js dan
+   bergeser (transform) ke item aktif. Tanpa JavaScript, gaya aktif statis
+   bawaan (.nav-link--active) tetap dipakai.
+   ========================================================================== */
+
+.sidebar__top {
+    position: relative;
+}
+
+.sidebar__top .nav-link {
+    position: relative;
+    z-index: 1;                 /* teks dan ikon di atas indikator */
+}
+
+.nav-indicator {
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 46px;               /* disetel ulang oleh JS sesuai item */
+
+    background: rgba(36, 124, 131, 0.28);
+    border: 1px solid rgba(91, 184, 184, 0.2);
+    border-radius: 9px;
+
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* Aksen vertikal tipis di tepi kiri indikator. */
+.nav-indicator::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: -1px;
+
+    width: 3px;
+    background: #7DD3C7;
+    border-radius: 0 3px 3px 0;
+}
+
+.nav-indicator.is-visible {
+    opacity: 1;
+}
+
+.nav-indicator.is-animating {
+    transition:
+        transform var(--motion-nav-duration) var(--motion-ease),
+        opacity var(--motion-hover-duration) var(--motion-ease);
+}
+
+/* Setelah indikator siap, latar item aktif dipegang indikator.
+   :not(:hover) menjaga umpan balik hover bawaan tetap bekerja. */
+.sidebar.has-nav-indicator .nav-link--active:not(:hover) {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Sinkronisasi warna saat berpindah halaman: item asal masih tampil aktif,
+   item tujuan tampil nonaktif, lalu keduanya bertransisi bersamaan dengan
+   pergeseran indikator. */
+.nav-link.is-leaving {
+    color: #FFFFFF;
+}
+
+.nav-link.is-leaving .icon {
+    color: #7DD3C7;
+}
+
+.nav-link--active.is-arriving {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.nav-link--active.is-arriving .icon {
+    color: inherit;
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   - Reveal: tidak ada penundaan, tidak ada gerakan vertikal.
+   - Indikator: tidak bergeser; status aktif tetap terlihat jelas.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html.js-reveal:not(.is-revealing) .page-content,
+    html.js-reveal:not(.is-revealing) [data-stagger] {
+        opacity: 1;
+    }
+
+    html.js-reveal.is-revealing .page-content,
+    html.js-reveal.is-revealing [data-stagger] {
+        animation: none;
+    }
+
+    .nav-indicator.is-animating {
+        transition: none;
+    }
+
+    .nav-link,
+    .nav-link .icon {
+        transition-duration: 0.01ms;
+    }
+}

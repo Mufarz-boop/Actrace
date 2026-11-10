@@ -1,10 +1,10 @@
-
 import logging
 from datetime import date
 
 from mysql.connector import Error
 
 from app.db import get_db_connection
+
 from app.services.photo_service import (
     save_journal_photos,
     delete_saved_photos,
@@ -12,17 +12,17 @@ from app.services.photo_service import (
     PhotoValidationError,
 )
 
-
 logger = logging.getLogger(__name__)
-
 
 class JournalValidationError(Exception):
     """Kesalahan validasi data jurnal."""
 
-
 class JournalSaveError(Exception):
     """Kesalahan ketika jurnal gagal disimpan."""
 
+
+class JournalDeleteError(Exception):
+    """Kesalahan ketika jurnal gagal dihapus."""
 
 # =====================================================
 # JOURNAL VALIDATION
@@ -755,3 +755,287 @@ def get_gallery_photos(user_id, page=1, per_page=24):
 
         if connection:
             connection.close()
+
+# =====================================================
+# DELETE JOURNAL
+# =====================================================
+
+def delete_journal(journal_id, user_id):
+    """
+    Menghapus jurnal milik pengguna beserta metadata
+    dan file fisik foto dokumentasinya.
+
+    Alur:
+    1. Validasi parameter.
+    2. Membuka transaksi database.
+    3. Memastikan jurnal dimiliki pengguna.
+    4. Mengunci data jurnal.
+    5. Mengambil seluruh path foto.
+    6. Menghapus jurnal.
+    7. Melakukan commit.
+    8. Menghapus file foto fisik.
+
+    Returns:
+        dict:
+            {
+                "deleted": bool,
+                "cleanup_pending": bool
+            }
+
+    JournalDeleteError:
+        Jika proses database gagal.
+    """
+
+    if not journal_id or not user_id:
+
+        raise JournalValidationError(
+            "Data jurnal tidak valid."
+        )
+
+    connection = None
+    cursor = None
+
+    photo_paths = []
+    transaction_committed = False
+
+    try:
+
+        # =================================================
+        # 1. DATABASE CONNECTION
+        # =================================================
+
+        connection = get_db_connection()
+
+        connection.start_transaction()
+
+        cursor = connection.cursor(
+            dictionary=True
+        )
+
+        # =================================================
+        # 2. VALIDATE JOURNAL OWNERSHIP
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT journal_id
+            FROM journals
+            WHERE journal_id = %s
+              AND user_id = %s
+            FOR UPDATE
+            """,
+            (
+                journal_id,
+                user_id,
+            ),
+        )
+
+        journal = cursor.fetchone()
+
+        if not journal:
+
+            connection.rollback()
+
+            return {
+                "deleted": False,
+                "cleanup_pending": False,
+            }
+
+        # =================================================
+        # 3. GET JOURNAL PHOTO PATHS
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT file_path
+            FROM journal_photos
+            WHERE journal_id = %s
+            FOR UPDATE
+            """,
+            (journal_id,),
+        )
+
+        photo_records = cursor.fetchall()
+
+        photo_paths = [
+            row["file_path"]
+            for row in photo_records
+            if row.get("file_path")
+        ]
+
+        # =================================================
+        # 4. DELETE JOURNAL
+        # =================================================
+
+        cursor.execute(
+            """
+            DELETE FROM journals
+            WHERE journal_id = %s
+              AND user_id = %s
+            """,
+            (
+                journal_id,
+                user_id,
+            ),
+        )
+
+        if cursor.rowcount != 1:
+
+            connection.rollback()
+
+            return {
+                "deleted": False,
+                "cleanup_pending": False,
+            }
+
+        # =================================================
+        # 5. COMMIT DATABASE TRANSACTION
+        # =================================================
+
+        connection.commit()
+
+        transaction_committed = True
+
+        logger.info(
+            "[ACTRACE][DELETE] Database journal berhasil dihapus. "
+            "journal_id=%s user_id=%s photo_count=%s",
+            journal_id,
+            user_id,
+            len(photo_paths),
+        )
+
+        # =================================================
+        # 6. DELETE PHYSICAL PHOTO FILES
+        # =================================================
+
+        failed_paths = []
+
+        if photo_paths:
+
+            try:
+
+                failed_paths = delete_photo_files(
+                    photo_paths
+                )
+
+            except Exception:
+
+                # Database sudah berhasil di-commit.
+                # Jangan menganggap jurnal masih ada
+                # hanya karena penghapusan file gagal.
+
+                logger.exception(
+                    "[ACTRACE][DELETE] "
+                    "Terjadi kesalahan saat membersihkan file foto. "
+                    "journal_id=%s",
+                    journal_id,
+                )
+
+                failed_paths = photo_paths
+
+        # =================================================
+        # 7. CLEANUP RESULT
+        # =================================================
+
+        cleanup_pending = bool(failed_paths)
+
+        if cleanup_pending:
+
+            logger.error(
+                "[ACTRACE][DELETE] "
+                "Beberapa file foto belum berhasil dihapus. "
+                "journal_id=%s failed_files=%s",
+                journal_id,
+                failed_paths,
+            )
+
+        else:
+
+            logger.info(
+                "[ACTRACE][DELETE] "
+                "Seluruh file dokumentasi berhasil dibersihkan. "
+                "journal_id=%s",
+                journal_id,
+            )
+
+        return {
+            "deleted": True,
+            "cleanup_pending": cleanup_pending,
+        }
+
+    except Error as exc:
+
+        if connection and not transaction_committed:
+
+            try:
+
+                connection.rollback()
+
+            except Exception:
+
+                logger.exception(
+                    "Rollback transaksi penghapusan gagal."
+                )
+
+        logger.exception(
+            "[ACTRACE][DELETE] Database error. "
+            "journal_id=%s user_id=%s",
+            journal_id,
+            user_id,
+        )
+
+        raise JournalDeleteError(
+            "Jurnal gagal dihapus karena kesalahan database."
+        ) from exc
+
+    except Exception as exc:
+
+        if connection and not transaction_committed:
+
+            try:
+
+                connection.rollback()
+
+            except Exception:
+
+                logger.exception(
+                    "Rollback transaksi penghapusan gagal."
+                )
+
+        logger.exception(
+            "[ACTRACE][DELETE] Unexpected error. "
+            "journal_id=%s user_id=%s",
+            journal_id,
+            user_id,
+        )
+
+        raise JournalDeleteError(
+            "Terjadi kesalahan ketika menghapus jurnal."
+        ) from exc
+
+    finally:
+
+        if cursor:
+
+            try:
+
+                cursor.close()
+
+            except Exception:
+
+                logger.exception(
+                    "Gagal menutup cursor penghapusan jurnal."
+                )
+
+        if connection:
+
+            try:
+
+                if connection.is_connected():
+                    connection.close()
+
+            except Exception:
+
+                logger.exception(
+                    "Gagal menutup koneksi database penghapusan jurnal."
+                )

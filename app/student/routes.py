@@ -2,7 +2,6 @@ import bcrypt
 import io
 import uuid
 from datetime import date
-from datetime import date
 from pathlib import Path
 
 from flask import (
@@ -29,8 +28,10 @@ from app.services.journal_service import (
     create_journal,
     get_journal_detail,
     update_journal,
+    delete_journal,
     JournalValidationError,
     JournalSaveError,
+    JournalDeleteError,
     get_journals_for_report,
     get_gallery_photos,
 )
@@ -1591,7 +1592,6 @@ def detail_journal(journal_id):
         journal=journal,
     )
 
-
 # =====================================================
 # EDIT JOURNAL
 # =====================================================
@@ -1990,3 +1990,82 @@ def add_journal():
         "student/add_journal.html",
         today=date.today().isoformat()
     )
+
+# =====================================================
+# DELETE JOURNAL
+# =====================================================
+
+@student_bp.post("/journals/<int:journal_id>/delete")
+@student_required
+def delete_journal_route(journal_id):
+
+    student_id = session["user_id"]
+
+    try:
+
+        # =================================================
+        # 1. DELETE JOURNAL THROUGH SERVICE
+        # =================================================
+
+        result = delete_journal(
+            journal_id=journal_id,
+            user_id=student_id,
+        )
+
+        # =================================================
+        # 2. VALIDATE RESULT
+        # =================================================
+
+        if not result or not result.get("deleted"):
+
+            abort(404)
+
+        # =================================================
+        # 3. HANDLE CLEANUP STATUS
+        # =================================================
+
+        if result.get("cleanup_pending"):
+
+            flash(
+                "Jurnal berhasil dihapus, tetapi beberapa "
+                "file dokumentasi belum berhasil dibersihkan.",
+                "warning",
+            )
+
+        else:
+
+            flash(
+                "Jurnal dan seluruh dokumentasi berhasil dihapus.",
+                "success",
+            )
+
+        # =================================================
+        # 4. REDIRECT
+        # =================================================
+
+        return redirect(
+            url_for("student.journals")
+        )
+
+    except JournalDeleteError:
+
+        current_app.logger.exception(
+            "[ACTRACE][DELETE] "
+            "Gagal menghapus jurnal. "
+            "journal_id=%s student_id=%s",
+            journal_id,
+            student_id,
+        )
+
+        flash(
+            "Jurnal gagal dihapus. "
+            "Tidak ada perubahan yang berhasil disimpan.",
+            "error",
+        )
+
+        return redirect(
+            url_for(
+                "student.detail_journal",
+                journal_id=journal_id,
+            )
+        )

@@ -37,6 +37,54 @@
         href="{{ url_for('static', filename='css/student.css') }}"
     >
 
+    <!-- Animasi login (Circular Iris Opening). Dimuat di head tanpa defer
+         agar dashboard dapat ditutup overlay sebelum sempat tampil. -->
+    <script
+        src="{{ url_for('static', filename='js/login-animation.js') }}"
+        data-reveal
+    ></script>
+
+    <!-- Animasi logout (Circular Iris Closing) + penjaga tombol Back.
+         Dimuat di head agar penjaga berjalan sebelum dashboard tampil. -->
+    <script
+        src="{{ url_for('static', filename='js/logout-animation.js') }}"
+        data-login-url="{{ url_for('auth.login') }}"
+    ></script>
+
+
+    <style>
+        /* Area menu dapat digulir; akun dan tombol logout tetap di bawah. */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .sidebar__top {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+
+            /* Sembunyikan scrollbar tanpa mematikan fungsi scroll. */
+            scrollbar-width: none;       /* Firefox */
+            -ms-overflow-style: none;    /* Internet Explorer / Edge lama */
+        }
+
+        .sidebar__top::-webkit-scrollbar {
+            display: none;               /* Chrome, Safari, Opera, Edge */
+            width: 0;
+            height: 0;
+        }
+
+        .sidebar__bottom {
+            flex: 0 0 auto;
+        }
+    </style>
+
     {% block head %}{% endblock %}
 </head>
 
@@ -274,6 +322,12 @@
 
         </aside>
 
+        <!-- Indikator navigasi animasi. Dimuat tanpa defer tepat setelah
+             sidebar agar indikator sudah di posisi sebelum halaman digambar. -->
+        <script
+            src="{{ url_for('static', filename='js/nav-indicator.js') }}"
+        ></script>
+
 
         <!-- MAIN AREA -->
         <div class="student-main">
@@ -354,6 +408,107 @@
 
     </div>
 
+
+    <!-- LOGOUT TRANSITION: Circular Iris Closing
+         Tetap di tingkat body agar position: fixed tidak terpengaruh
+         transform pada sidebar mobile. Disembunyikan sampai logout dikirim. -->
+    <div
+        class="logout-transition"
+        id="logout-transition"
+        role="status"
+        aria-live="polite"
+        aria-hidden="true"
+        tabindex="-1"
+        hidden
+    >
+        <div class="logout-transition__iris"></div>
+
+        <div class="logout-transition__content">
+
+            <div class="logout-transition__logo">
+                <svg
+                    class="logout-transition__mark"
+                    viewBox="0 0 40 40"
+                    aria-hidden="true"
+                    focusable="false"
+                >
+                    <rect width="40" height="40" rx="10" fill="#247C83"/>
+                    <path
+                        class="logout-transition__trace"
+                        d="M10 27 L17 19 L22 23 L30 12"
+                        pathLength="1"
+                        fill="none"
+                        stroke="#FFFFFF"
+                        stroke-width="2.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                    <circle
+                        class="logout-transition__dot"
+                        cx="30" cy="12" r="3.4"
+                        fill="#E8A64A"
+                    />
+                </svg>
+
+                <p class="logout-transition__wordmark">ACTRACE</p>
+            </div>
+
+            <p class="logout-transition__message">SEE YOU AGAIN</p>
+
+        </div>
+
+        <span class="logout-transition__sr">Signing out of ACTRACE</span>
+    </div>
+
+    <!-- LOGIN TRANSITION: Circular Iris Opening
+         Tetap di tingkat body agar position: fixed tidak terpengaruh
+         transform pada sidebar mobile. Disembunyikan sampai login-animation.js
+         mengaktifkannya setelah login berhasil. -->
+    <div
+        class="login-transition"
+        id="login-transition"
+        role="status"
+        aria-live="polite"
+        aria-hidden="true"
+        tabindex="-1"
+        hidden
+    >
+        <div class="login-transition__iris"></div>
+
+        <div class="login-transition__content">
+
+            <div class="login-transition__badge">
+                <svg
+                    class="login-transition__mark"
+                    viewBox="0 0 40 40"
+                    aria-hidden="true"
+                    focusable="false"
+                >
+                    <rect width="40" height="40" rx="10" fill="#247C83"/>
+                    <path
+                        class="login-transition__trace"
+                        d="M10 27 L17 19 L22 23 L30 12"
+                        pathLength="1"
+                        fill="none"
+                        stroke="#FFFFFF"
+                        stroke-width="2.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                    <circle
+                        class="login-transition__dot"
+                        cx="30" cy="12" r="3.4"
+                        fill="#E8A64A"
+                    />
+                </svg>
+
+                <p class="login-transition__wordmark">ACTRACE</p>
+            </div>
+
+        </div>
+
+        <span class="login-transition__sr">Signed in. Opening your ACTRACE workspace</span>
+    </div>
 
     <script
         src="{{ url_for('static', filename='js/main.js') }}"

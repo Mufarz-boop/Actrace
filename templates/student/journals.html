@@ -113,6 +113,33 @@
                         </a>
                     </div>
 
+                    <form
+                        method="POST"
+                        action="{{ url_for(
+                            'student.delete_journal_route',
+                            journal_id=journal.journal_id
+                        ) }}"
+                        class="journal-delete-form"
+                        onsubmit="
+                            return confirm(
+                                'Hapus jurnal ini secara permanen beserta seluruh foto dokumentasinya?'
+                            );
+                        "
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="journal-delete-button"
+                        >
+                            <i class="fas fa-trash-alt"></i>
+                            Hapus jurnal
+                        </button>
+                    </form>
 
                     <a
                         href="{{ url_for('student.detail_journal', journal_id=journal.journal_id) }}"

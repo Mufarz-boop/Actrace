@@ -2,6 +2,34 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block head %}
+<!-- Keadaan awal Staggered Dashboard Reveal. Dipasang di <head> agar tidak
+     ada kilatan konten. Dilewati untuk reduced motion dan tombol Back/Forward.
+     Tanpa JavaScript kelas ini tidak ada, jadi dashboard langsung tampil. -->
+<script>
+    (function () {
+        var root = document.documentElement;
+
+        try {
+            if (window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return;
+            }
+
+            var nav = window.performance.getEntriesByType('navigation');
+            if (nav && nav.length && nav[0].type === 'back_forward') return;
+        } catch (err) { /* lanjutkan dengan reveal */ }
+
+        root.classList.add('js-reveal');
+
+        // Jaring pengaman: konten tidak boleh tetap tersembunyi.
+        window.setTimeout(function () {
+            root.classList.remove('js-reveal', 'is-revealing');
+        }, 7000);
+    })();
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- PAGE HEADING -->
@@ -9,16 +37,16 @@
 
     <div class="welcome-section__text">
 
-        <span class="section-eyebrow">
+        <span class="section-eyebrow" data-stagger style="--reveal-index:0">
             OVERVIEW
         </span>
 
-        <h1>
+        <h1 data-stagger style="--reveal-index:0">
             Welcome back,
             <span>{{ session.get('full_name', 'Student') }}</span>
         </h1>
 
-        <p>
+        <p data-stagger style="--reveal-index:1">
             Pantau perjalanan PKL-mu dan dokumentasikan
             setiap pengalaman melalui ACTRACE.
         </p>
@@ -26,7 +54,7 @@
     </div>
 
 
-    <div class="welcome-date">
+    <div class="welcome-date" data-stagger style="--reveal-index:1">
 
         <svg class="icon" aria-hidden="true">
             <use href="#icon-calendar"></use>
@@ -42,7 +70,7 @@
 <!-- STATISTICS -->
 <section class="stats-grid" aria-label="Ringkasan aktivitas">
 
-    <article class="stat-card stat-card--primary">
+    <article class="stat-card stat-card--primary" data-stagger style="--reveal-index:2">
 
         <div class="stat-card__top">
 
@@ -77,7 +105,7 @@
     </article>
 
 
-    <article class="stat-card">
+    <article class="stat-card" data-stagger style="--reveal-index:3">
 
         <div class="stat-card__top">
 
@@ -134,7 +162,7 @@
 <section class="dashboard-grid">
 
     <!-- JOURNAL OVERVIEW -->
-    <article class="panel journal-panel">
+    <article class="panel journal-panel" data-stagger style="--reveal-index:4">
 
         <div class="panel__header">
 
@@ -232,7 +260,7 @@
 
 
     <!-- QUICK ACCESS -->
-    <article class="panel quick-panel">
+    <article class="panel quick-panel" data-stagger style="--reveal-index:5">
 
         <div class="panel__header">
 
@@ -315,7 +343,7 @@
 
 
 <!-- INFORMATION BANNER -->
-<section class="info-banner">
+<section class="info-banner" data-stagger style="--reveal-index:6">
 
     <div class="info-banner__symbol">
         <svg class="icon" aria-hidden="true">
@@ -342,6 +370,11 @@
 
 
 {% block scripts %}
+
+<script
+    src="{{ url_for('static', filename='js/dashboard-reveal.js') }}"
+    defer
+></script>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
