@@ -6262,6 +6262,284 @@ html.js-reveal.is-revealing [data-stagger] {
 
 
 /* ==========================================================================
+   DASHBOARD CARD INTERACTION  (Phase 01)
+   Hanya berlaku untuk kartu pada dashboard.html:
+   .stat-card, .dashboard-grid .panel, .quick-link, .info-banner.
+
+   Prinsip UX:
+   - Gerak hanya pada kartu yang memberi informasi baru atau bisa diklik.
+     Kartu statistik terangkat; panel besar TIDAK terangkat (menghindari
+     gerak ganda saat baris di dalamnya di-hover), hanya border + bayangan.
+   - Hover dibatasi ke perangkat dengan kursor (hover: hover). Pada layar
+     sentuh tidak ada informasi yang bergantung pada hover; baris Quick
+     Access memberi umpan balik :active saat disentuh.
+   - Animasi masuk (staggered reveal) ada di bagian sebelumnya. Hover baru
+     aktif setelah reveal selesai (html:not(.is-revealing)) agar tidak
+     berebut properti transform dengan animasi masuk.
+   - Hanya transform, opacity, border-color, dan box-shadow.
+   ========================================================================== */
+
+:root {
+    --card-lift: -3px;
+    --card-duration: 240ms;
+    --card-border-hover: rgba(36, 124, 131, 0.38);
+    --card-border-hover-on-navy: rgba(125, 211, 199, 0.55);
+    --card-shadow-hover:
+        0 2px 4px rgba(20, 45, 78, 0.06),
+        0 18px 38px rgba(20, 45, 78, 0.12);
+    --card-glow: rgba(36, 124, 131, 0.09);
+    --card-glow-on-navy: rgba(125, 211, 199, 0.16);
+}
+
+
+/* ---------- Dasar: transisi + lapisan sorotan (selalu terpasang) ------- */
+
+.stat-card,
+.dashboard-grid .panel,
+.info-banner {
+    position: relative;
+    isolation: isolate;          /* sorotan z-index:-1 tetap di dalam kartu */
+    transition:
+        transform var(--card-duration) var(--motion-ease),
+        box-shadow var(--card-duration) var(--motion-ease),
+        border-color var(--card-duration) var(--motion-ease);
+}
+
+/* Sorotan radial. Berada di bawah isi kartu, tidak menangkap pointer,
+   dan hanya opacity yang beranimasi. */
+.stat-card::before,
+.dashboard-grid .panel::before,
+.info-banner::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+
+    background: radial-gradient(
+        120% 90% at 100% 0%,
+        var(--card-glow),
+        transparent 62%
+    );
+    border-radius: inherit;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--card-duration) var(--motion-ease);
+}
+
+.stat-card--primary::before,
+.info-banner::before {
+    background: radial-gradient(
+        120% 90% at 100% 0%,
+        var(--card-glow-on-navy),
+        transparent 62%
+    );
+}
+
+/* Panel besar: sorotan lebih halus. */
+.dashboard-grid .panel::before {
+    background: radial-gradient(
+        110% 70% at 100% 0%,
+        rgba(36, 124, 131, 0.055),
+        transparent 60%
+    );
+}
+
+/* Ikon: transisi dasar agar kembali ke posisi awal dengan halus. */
+.stat-card__icon,
+.info-banner__symbol,
+.quick-link__icon {
+    transition:
+        transform var(--card-duration) var(--motion-ease),
+        background-color var(--card-duration) var(--motion-ease),
+        color var(--card-duration) var(--motion-ease),
+        border-color var(--card-duration) var(--motion-ease);
+}
+
+.text-link .icon,
+.quick-link__arrow {
+    transition:
+        transform var(--card-duration) var(--motion-ease),
+        color var(--card-duration) var(--motion-ease);
+}
+
+
+/* ---------- Quick Access: baris yang benar-benar bisa diklik ----------- */
+
+.quick-link {
+    position: relative;
+    isolation: isolate;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Latar hover berupa lapisan terpisah agar border-bottom antarbaris
+   tidak bergeser dan layout tidak berubah. */
+.quick-link::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: -10px;
+    right: -10px;
+    z-index: -1;
+
+    background: #EEF7F5;
+    border-radius: 10px;
+
+    opacity: 0;
+    transform: scale(0.985);
+    pointer-events: none;
+    transition:
+        opacity var(--card-duration) var(--motion-ease),
+        transform var(--card-duration) var(--motion-ease);
+}
+
+/* Fokus keyboard mendapat sorotan yang sama dengan hover. */
+.quick-link:focus-visible {
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+.quick-link:focus-visible::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.quick-link:focus-visible .quick-link__icon {
+    color: #FFFFFF;
+    background: var(--color-teal);
+}
+
+.dashboard-grid .panel:focus-within {
+    border-color: var(--card-border-hover);
+}
+
+/* Umpan balik tekan: berlaku di sentuh maupun mouse. */
+.quick-link:active::before {
+    opacity: 1;
+    background: #E3F1EE;
+    transform: scale(0.985);
+}
+
+.quick-link:active .quick-link__icon {
+    transform: scale(0.94);
+}
+
+
+/* ---------- Hover: hanya perangkat dengan kursor, setelah reveal ------- */
+
+@media (hover: hover) and (pointer: fine) {
+
+    /* Kartu statistik: terangkat + border teal + bayangan bertahap. */
+    html:not(.is-revealing) .stat-card:hover {
+        transform: translate3d(0, var(--card-lift), 0);
+        border-color: var(--card-border-hover);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    html:not(.is-revealing) .stat-card--primary:hover {
+        border-color: var(--card-border-hover-on-navy);
+    }
+
+    html:not(.is-revealing) .stat-card:hover::before,
+    html:not(.is-revealing) .dashboard-grid .panel:hover::before,
+    html:not(.is-revealing) .info-banner:hover::before {
+        opacity: 1;
+    }
+
+    /* Ikon kartu statistik: skala kecil + rotasi ringan. */
+    html:not(.is-revealing) .stat-card:hover .stat-card__icon {
+        transform: scale(1.08) rotate(-4deg);
+    }
+
+    html:not(.is-revealing) .stat-card--primary:hover .stat-card__icon {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    html:not(.is-revealing) .stat-card:hover .stat-card__icon--teal {
+        background: #D6EBE7;
+    }
+
+    /* Panel besar: tanpa translasi, hanya border dan bayangan. */
+    html:not(.is-revealing) .dashboard-grid .panel:hover {
+        border-color: var(--card-border-hover);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    /* Banner informasi: tanpa angkat; sorotan + ikon bereaksi. */
+    html:not(.is-revealing) .info-banner:hover .info-banner__symbol {
+        transform: scale(1.06) rotate(-5deg);
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    /* "View all": panah bergeser sebagai petunjuk arah. */
+    .text-link:hover .icon {
+        transform: translateX(3px);
+    }
+
+    /* Quick Access: latar, ikon terisi teal, panah bergeser. */
+    .quick-link:hover::before {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .quick-link:hover .quick-link__icon {
+        color: #FFFFFF;
+        background: var(--color-teal);
+        transform: scale(1.06);
+    }
+
+    /* Panah Quick Access sudah bergeser lewat a.quick-link:hover
+       (aturan dasar); di sini hanya disamakan easing-nya. */
+    a.quick-link:hover .quick-link__arrow {
+        transform: translateX(4px);
+    }
+
+    /* Tekan setelah hover: ikon tidak membesar saat ditekan. */
+    .quick-link:active:hover .quick-link__icon {
+        transform: scale(0.94);
+    }
+}
+
+
+/* ---------- Reduced motion: tanpa gerak, penanda warna tetap ada ------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .stat-card,
+    .dashboard-grid .panel,
+    .info-banner,
+    .stat-card::before,
+    .dashboard-grid .panel::before,
+    .info-banner::before,
+    .quick-link::before,
+    .stat-card__icon,
+    .info-banner__symbol,
+    .quick-link__icon,
+    .text-link .icon,
+    .quick-link__arrow {
+        transition: none;
+    }
+
+    html:not(.is-revealing) .stat-card:hover,
+    html:not(.is-revealing) .stat-card:hover .stat-card__icon,
+    html:not(.is-revealing) .info-banner:hover .info-banner__symbol,
+    .text-link:hover .icon,
+    .quick-link:hover::before,
+    .quick-link:hover .quick-link__icon,
+    a.quick-link:hover .quick-link__arrow,
+    .quick-link:active::before,
+    .quick-link:active .quick-link__icon {
+        transform: none;
+    }
+}
+
+
+/* ==========================================================================
    ANIMATED NAVIGATION INDICATOR
    Satu elemen .nav-indicator dibuat oleh static/js/nav-indicator.js dan
    bergeser (transform) ke item aktif. Tanpa JavaScript, gaya aktif statis
