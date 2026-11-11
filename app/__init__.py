@@ -134,28 +134,32 @@ def create_app():
 
 
     # ======================================
-    # TEMPORARY ERROR TESTING ROUTES
-    # REMOVE AFTER TESTING
+    # DEVELOPMENT-ONLY ERROR PREVIEW ROUTES
     # ======================================
+    # Hanya didaftarkan saat DEBUG aktif agar halaman error dapat
+    # dipratinjau saat pengembangan. Pada konfigurasi produksi
+    # (DEBUG=False) route ini tidak ada sama sekali (404).
 
-    @app.get("/test-error/403")
-    def test_error_403():
+    if app.config.get("DEBUG"):
 
-        abort(403)
+        @app.get("/test-error/403")
+        def test_error_403():
 
-
-    @app.get("/test-error/404")
-    def test_error_404():
-
-        abort(404)
+            abort(403)
 
 
-    @app.get("/test-error/500")
-    def test_error_500():
+        @app.get("/test-error/404")
+        def test_error_404():
 
-        raise RuntimeError(
-            "ACTRACE testing: Internal Server Error"
-        )
+            abort(404)
+
+
+        @app.get("/test-error/500")
+        def test_error_500():
+
+            raise RuntimeError(
+                "ACTRACE testing: Internal Server Error"
+            )
 
 
     # ======================================

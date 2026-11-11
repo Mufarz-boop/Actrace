@@ -34,3 +34,21 @@
 5. Jalankan `python run.py`.
 
 Catatan keamanan: file `.env`, direktori `.git`, dan virtual environment tidak disertakan dalam arsip hasil. Buat `.env` lokal dari `.env.example`; jangan membagikan kredensial.
+
+## Pengujian otomatis (Fase 1)
+Suite `unittest` berada di `tests/` dan tidak pernah membuka koneksi database sungguhan
+(`get_db_connection` diganti tiruan). Konfigurasi tes diisi dari environment tes, bukan dari `.env`.
+
+Menjalankan (root proyek, venv aktif):
+
+    python -m unittest discover -s tests -t . -v
+
+Cakupan saat ini (34 tes): validasi konfigurasi, route `/test-error/*` hanya saat `DEBUG` aktif,
+halaman error tanpa kebocoran detail, header keamanan, gerbang login pada seluruh route siswa
+(termasuk bukti DB tidak disentuh), perilaku login/logout/CSRF, dan autentikasi API key.
+
+Batas klaim: tes ini memakai DB tiruan sehingga TIDAK membuktikan query SQL, skema, upload foto,
+PDF, atau alur browser berjalan benar pada MySQL sungguhan. Itu memerlukan uji integrasi terpisah.
+
+Perubahan Fase 1: route `/test-error/*` hanya didaftarkan bila `DEBUG=true`; ditambahkan
+`.gitattributes` (`* text=auto`) agar perbedaan CRLF/LF tidak muncul sebagai perubahan file.
