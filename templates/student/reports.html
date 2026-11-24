@@ -28,12 +28,308 @@
         }, 3500);
     })();
 </script>
+
+<style>
+/* =========================================================================
+   ACTRACE | Activity Reports - lapisan tampilan (hanya halaman ini)
+   Semua aturan dibatasi di bawah .report-page. Kelas baru berawalan "rpx-".
+   Palet: navy #142D4E, teal #0D9488 (aksen), teal tua #0F766E (teks/tombol
+   agar kontras >= 4.5:1 di atas putih), latar #F3F5F7.
+   ========================================================================= */
+.report-page {
+    --rpx-navy: #142D4E;
+    --rpx-teal: #0D9488;
+    --rpx-teal-strong: #0F766E;
+    --rpx-teal-tint: #E6F5F3;
+    --rpx-bg: #F3F5F7;
+    --rpx-border: #E1E6EB;
+    --rpx-text: #334155;
+    --rpx-muted: #5B6778;
+    gap: 24px;
+    min-width: 0;
+}
+
+.report-page *,
+.report-page *::before,
+.report-page *::after { box-sizing: border-box; }
+
+/* ---------- A. Header ---------- */
+.report-page .report-page__heading {
+    align-items: flex-end;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--rpx-border);
+}
+.report-page .report-page__heading h1 {
+    color: var(--rpx-navy);
+    font-size: clamp(26px, 3.2vw, 34px);
+    line-height: 1.15;
+}
+.report-page .report-page__heading p {
+    max-width: 60ch;
+    color: var(--rpx-muted);
+    font-size: 14px;
+    line-height: 1.65;
+}
+.report-page .section-eyebrow { color: var(--rpx-teal-strong); font-size: 11px; }
+.report-page .journals-back-link { flex: none; min-height: 44px; }
+
+/* ---------- Panel dasar ---------- */
+.report-page .panel {
+    padding: 26px;
+    border: 1px solid var(--rpx-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(20, 45, 78, .04), 0 6px 20px rgba(20, 45, 78, .05);
+}
+.report-page .panel__header { margin-bottom: 22px; }
+.report-page .panel__header h2 { color: var(--rpx-navy); font-size: 20px; line-height: 1.3; }
+.report-page .panel__header p { color: var(--rpx-muted); font-size: 13px; }
+
+/* ---------- Tata letak: form + panduan ---------- */
+.rpx-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+.rpx-layout > * { min-width: 0; }
+
+/* ---------- B. Form pembuatan laporan ---------- */
+.report-page .report-filter { padding: 26px; }
+.report-page .report-filter__icon {
+    color: var(--rpx-teal-strong);
+    background: var(--rpx-teal-tint);
+    border-radius: 12px;
+}
+.report-page .report-filter__form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px 18px;
+}
+.report-page .report-date-field { gap: 8px; min-width: 0; }
+.report-page .report-date-field label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--rpx-navy);
+    font-size: 13px;
+    font-weight: 700;
+}
+.rpx-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    line-height: 1.6;
+}
+.rpx-field--start .rpx-badge { color: var(--rpx-navy); background: #E6EBF2; }
+.rpx-field--end   .rpx-badge { color: var(--rpx-teal-strong); background: var(--rpx-teal-tint); }
+
+.report-page .report-date-field input {
+    min-height: 48px;
+    padding: 0 14px;
+    color: var(--rpx-navy);
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    font-size: 14px;
+}
+.report-page .rpx-field--start input { border-left: 4px solid var(--rpx-navy); }
+.report-page .rpx-field--end input   { border-left: 4px solid var(--rpx-teal); }
+.report-page .report-date-field input:hover { border-color: #94A3B8; }
+.report-page .report-date-field input:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, .28);
+    outline-offset: 1px;
+    border-color: var(--rpx-teal-strong);
+}
+.rpx-hint { color: var(--rpx-muted); font-size: 12px; line-height: 1.5; }
+
+.report-page .add-journal-button { font-size: 13px; min-height: 46px; border-radius: 10px; }
+.report-page .add-journal-button--submit {
+    background: var(--rpx-teal-strong);
+    border-color: var(--rpx-teal-strong);
+}
+.report-page .add-journal-button--submit:hover {
+    background: #115E59;
+    border-color: #115E59;
+}
+.report-page .add-journal-button:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, .4);
+    outline-offset: 3px;
+}
+.report-page .report-export__button.is-done { background: #1E7F5C; border-color: #1E7F5C; }
+
+.report-page .report-filter__submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-width: 220px;
+}
+
+.report-page .report-alert {
+    margin-top: 18px;
+    padding: 12px 14px;
+    color: #8B2323;
+    background: #FEF2F2;
+    border: 1px solid #F3C9C9;
+    border-left: 4px solid #B54747;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.report-page .report-alert[hidden] { display: none; }
+
+/* ---------- C. Panel panduan ---------- */
+.rpx-guide { background: #FBFCFD; }
+.rpx-guide__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+    color: var(--rpx-navy);
+    font-size: 16px;
+    font-weight: 800;
+}
+.rpx-guide__title i { color: var(--rpx-teal-strong); }
+.rpx-guide__lead { margin: 0 0 16px; color: var(--rpx-muted); font-size: 13px; line-height: 1.65; }
+.rpx-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.rpx-list li {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 10px;
+    color: var(--rpx-text);
+    font-size: 13px;
+    line-height: 1.55;
+}
+.rpx-list li i { margin-top: 3px; color: var(--rpx-teal); font-size: 13px; }
+.rpx-list strong { color: var(--rpx-navy); }
+.rpx-rules {
+    margin: 18px 0 0;
+    padding: 14px 16px;
+    color: var(--rpx-text);
+    background: var(--rpx-teal-tint);
+    border-radius: 10px;
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+.rpx-rules strong { display: block; margin-bottom: 4px; color: var(--rpx-teal-strong); }
+.rpx-rules ul { margin: 0; padding-left: 18px; }
+
+/* ---------- Hasil ---------- */
+.report-page .report-result { gap: 18px; }
+.report-page .report-result__top {
+    align-items: flex-end;
+    padding: 0 2px;
+}
+.report-page .report-result__top h2 { color: var(--rpx-navy); font-size: 22px; line-height: 1.3; }
+.report-page .report-result__top p {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 12px;
+    color: var(--rpx-navy);
+    background: #FFFFFF;
+    border: 1px solid var(--rpx-border);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+.report-page .report-total strong { color: var(--rpx-navy); font-size: 32px; }
+.report-page .report-total span { color: var(--rpx-muted); font-size: 12px; }
+
+.report-page .report-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+.report-page .report-metric {
+    min-width: 0;
+    padding: 18px 20px;
+    background: #FFFFFF;
+    border: 1px solid var(--rpx-border);
+    border-top: 3px solid var(--rpx-teal);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(20, 45, 78, .04);
+}
+.report-page .report-metric span { color: var(--rpx-muted); font-size: 12.5px; font-weight: 600; }
+.report-page .report-metric span i { color: var(--rpx-teal-strong); }
+.report-page .report-metric strong { margin-top: 6px; color: var(--rpx-navy); font-size: 30px; line-height: 1.1; }
+
+.report-page .report-export {
+    gap: 20px;
+    padding: 20px 24px;
+    border-left: 4px solid var(--rpx-teal);
+}
+.report-page .report-export__copy { min-width: 0; align-items: flex-start; }
+.report-page .report-export__copy h3 { color: var(--rpx-navy); font-size: 15px; }
+.report-page .report-export__copy p { color: var(--rpx-muted); font-size: 13px; max-width: 62ch; }
+.report-page .report-export__button { flex: none; min-width: 230px; }
+.report-page .report-export__unavailable {
+    padding: 10px 14px;
+    color: var(--rpx-muted);
+    background: var(--rpx-bg);
+    border-radius: 10px;
+    font-size: 12.5px;
+}
+
+/* Daftar jurnal ringkas */
+.report-page .report-journal-list { border-color: var(--rpx-border); border-radius: 14px; }
+.report-page .report-journal { grid-template-columns: 64px minmax(0, 1fr); padding: 18px 22px; border-color: var(--rpx-border); }
+.report-page .report-journal__date { background: var(--rpx-bg); border-radius: 10px; min-height: 62px; }
+.report-page .report-journal__date strong { color: var(--rpx-navy); }
+.report-page .report-journal__date span { color: var(--rpx-muted); font-size: 10px; }
+.report-page .report-journal__identity { color: var(--rpx-muted); font-size: 11px; flex-wrap: wrap; gap: 4px 12px; }
+.report-page .report-journal--compact .report-journal__content h3 { color: var(--rpx-navy); font-size: 16px; }
+.report-page .report-journal--compact .report-journal__excerpt { color: var(--rpx-text); font-size: 13px; }
+.report-page .report-journal__summary-meta { color: var(--rpx-muted); font-size: 12px; }
+.report-page .report-journal__summary-meta > a { min-height: 32px; color: var(--rpx-teal-strong); }
+.report-page .report-journal__summary-meta > a:hover { color: #115E59; text-decoration: underline; }
+.report-page .report-journal__summary-meta > a:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, .4);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.report-page .report-empty { padding: 44px 24px; text-align: center; }
+.report-page .report-empty__icon { color: var(--rpx-teal-strong); background: var(--rpx-teal-tint); }
+.report-page .report-empty h3 { color: var(--rpx-navy); font-size: 16px; }
+.report-page .report-empty p { color: var(--rpx-muted); font-size: 13px; }
+
+/* ---------- Responsif ---------- */
+@media (max-width: 1100px) {
+    .rpx-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+    .report-page .report-page__heading { flex-direction: column; align-items: flex-start; }
+    .report-page .panel,
+    .report-page .report-filter { padding: 20px; }
+    .report-page .report-metrics { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .report-page .report-export { flex-direction: column; align-items: stretch; padding: 18px; }
+    .report-page .report-export__button { width: 100%; min-width: 0; }
+    .report-page .report-result__top { flex-direction: column; align-items: flex-start; }
+    .report-page .report-total { align-items: flex-start; }
+    .report-page .report-journal { grid-template-columns: 54px minmax(0, 1fr); gap: 12px; padding: 16px; }
+}
+
+@media (max-width: 520px) {
+    .report-page .report-filter__form { grid-template-columns: minmax(0, 1fr); }
+    .report-page .report-filter__submit { width: 100%; justify-self: stretch; min-width: 0; }
+    /* 16px mencegah zoom otomatis input pada iOS */
+    .report-page .report-date-field input { font-size: 16px; }
+    .report-page .panel__header { flex-direction: column-reverse; gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .report-page * { scroll-behavior: auto; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <section class="report-page">
 
-    <!-- PAGE HEADER -->
+    <!-- A. PAGE HEADER -->
     <header class="report-page__heading">
         <div>
             <span class="section-eyebrow" data-rp>
@@ -55,81 +351,145 @@
     </header>
 
 
-    <!-- DATE FILTER -->
-    <section class="report-filter panel"
-             aria-labelledby="report-filter-title"
-             data-rp>
+    <div class="rpx-layout">
 
-        <div class="panel__header">
-            <div>
-                <span class="section-eyebrow">PERIODE REKAP</span>
-                <h2 id="report-filter-title">
-                    Pilih Rentang Tanggal
-                </h2>
-                <p>
-                    Tentukan periode jurnal yang ingin direkap.
-                </p>
+        <!-- B. DATE FILTER / REPORT GENERATION -->
+        <section class="report-filter panel"
+                 aria-labelledby="report-filter-title"
+                 data-rp>
+
+            <div class="panel__header">
+                <div>
+                    <span class="section-eyebrow">PERIODE REKAP</span>
+                    <h2 id="report-filter-title">
+                        Pilih Rentang Tanggal
+                    </h2>
+                    <p>
+                        Tentukan periode jurnal yang ingin direkap, lalu
+                        tampilkan rekap untuk melihat jurnal dan mengunduh PDF.
+                    </p>
+                </div>
+
+                <div class="report-filter__icon" aria-hidden="true">
+                    <i class="fas fa-calendar-days"></i>
+                </div>
             </div>
 
-            <div class="report-filter__icon">
-                <i class="fas fa-calendar-days"></i>
+            <form method="get"
+                  action="{{ url_for('student.reports') }}"
+                  class="report-filter__form"
+                  id="report-filter-form">
+
+                <div class="report-date-field rpx-field--start">
+                    <label for="start_date">
+                        <span class="rpx-badge" aria-hidden="true">DARI</span>
+                        Tanggal awal
+                    </label>
+                    <input type="date"
+                           id="start_date"
+                           name="start_date"
+                           value="{{ start_date }}"
+                           max="{{ today }}"
+                           aria-describedby="start_date_hint"
+                           required>
+                    <span class="rpx-hint" id="start_date_hint">
+                        Hari pertama yang disertakan.
+                    </span>
+                </div>
+
+                <div class="report-date-field rpx-field--end">
+                    <label for="end_date">
+                        <span class="rpx-badge" aria-hidden="true">SAMPAI</span>
+                        Tanggal akhir
+                    </label>
+                    <input type="date"
+                           id="end_date"
+                           name="end_date"
+                           value="{{ end_date }}"
+                           max="{{ today }}"
+                           aria-describedby="end_date_hint"
+                           required>
+                    <span class="rpx-hint" id="end_date_hint">
+                        Hari terakhir yang disertakan, paling lambat hari ini.
+                    </span>
+                </div>
+
+                <button type="submit"
+                        class="add-journal-button add-journal-button--submit report-filter__submit">
+
+                    <i class="fas fa-filter"></i>
+                    Tampilkan Rekap
+
+                </button>
+            </form>
+
+            <div class="report-alert"
+                 id="report-client-error"
+                 role="alert"
+                 hidden>
             </div>
-        </div>
 
-        <form method="get"
-              action="{{ url_for('student.reports') }}"
-              class="report-filter__form"
-              id="report-filter-form">
+            {% if error %}
+            <div class="report-alert" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
 
-            <div class="report-date-field">
-                <label for="start_date">Tanggal awal</label>
-                <input type="date"
-                       id="start_date"
-                       name="start_date"
-                       value="{{ start_date }}"
-                       max="{{ today }}"
-                       required>
+        </section>
+
+
+        <!-- C. GUIDANCE -->
+        <aside class="rpx-guide panel"
+               aria-labelledby="rpx-guide-title"
+               data-rp>
+
+            <h2 class="rpx-guide__title" id="rpx-guide-title">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                Isi Laporan PDF
+            </h2>
+            <p class="rpx-guide__lead">
+                Dokumen PDF disusun otomatis dari jurnal Anda pada
+                periode yang dipilih.
+            </p>
+
+            <ul class="rpx-list">
+                <li>
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span><strong>Sampul laporan</strong> dengan identitas siswa dan periode.</span>
+                </li>
+                <li>
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span><strong>Ringkasan periode</strong> berisi jumlah jurnal, hari kegiatan, dan foto.</span>
+                </li>
+                <li>
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span><strong>Detail seluruh jurnal</strong> lengkap dengan deskripsi dan metadata.</span>
+                </li>
+                <li>
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span><strong>Dokumentasi foto</strong> kegiatan pada setiap jurnal.</span>
+                </li>
+            </ul>
+
+            <div class="rpx-rules">
+                <strong>Ketentuan periode</strong>
+                <ul>
+                    <li>Tanggal awal tidak boleh melewati tanggal akhir.</li>
+                    <li>Tanggal akhir tidak boleh melebihi hari ini.</li>
+                    <li>PDF hanya dibuat bila ada jurnal pada periode tersebut.</li>
+                </ul>
             </div>
 
-            <div class="report-date-field">
-                <label for="end_date">Tanggal akhir</label>
-                <input type="date"
-                       id="end_date"
-                       name="end_date"
-                       value="{{ end_date }}"
-                       max="{{ today }}"
-                       required>
-            </div>
+        </aside>
 
-            <button type="submit"
-                    class="add-journal-button add-journal-button--submit report-filter__submit">
-
-                <i class="fas fa-filter"></i>
-                Tampilkan Rekap
-
-            </button>
-        </form>
-
-        <div class="report-alert"
-             id="report-client-error"
-             role="alert"
-             hidden>
-        </div>
-
-        {% if error %}
-        <div class="report-alert" role="alert">
-            {{ error }}
-        </div>
-        {% endif %}
-
-    </section>
+    </div>
 
 
     <span class="rp-sr" id="rp-status" role="status" aria-live="polite"></span>
 
     {% if not error %}
 
-    <!-- REPORT SUMMARY -->
+    <!-- D. REPORT SUMMARY (data dari backend) -->
     <section class="report-result">
 
         <div class="report-result__top" data-rp>
