@@ -125,11 +125,18 @@ def reports():
 @student_bp.get("/reports/pdf")
 @student_required
 def download_journal_report():
+    # Hanya pesan dari _parse_report_period (statis, aman) yang boleh
+    # ditampilkan ke pengguna; error lain ditangani generik di bawah.
     try:
         start_date, end_date = _parse_report_period(
             request.args.get("start_date"),
             request.args.get("end_date"),
         )
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("student.reports"))
+
+    try:
         student_id = session["user_id"]
         journals = get_journals_for_report(
             user_id=student_id,
@@ -152,8 +159,18 @@ def download_journal_report():
             end_date=end_date,
             photo_root=current_app.config["UPLOAD_FOLDER"],
         )
-    except ValueError as exc:
-        flash(str(exc), "error")
+
+        # Jangan pernah mengirim berkas kosong/rusak sebagai PDF.
+        signature = pdf_file.read(5)
+        pdf_file.seek(0)
+        if signature != b"%PDF-":
+            raise RuntimeError("Generator PDF tidak menghasilkan berkas PDF valid.")
+    except JournalValidationError:
+        current_app.logger.warning(
+            "[ACTRACE][REPORT] Parameter rekap tidak valid | user_id=%s",
+            session.get("user_id"),
+        )
+        flash("Parameter rekap jurnal tidak valid.", "error")
         return redirect(url_for("student.reports"))
     except JournalSaveError:
         current_app.logger.exception(
@@ -174,12 +191,15 @@ def download_journal_report():
         f"ACTRACE_Rekap_Jurnal_{start_date.isoformat()}_"
         f"{end_date.isoformat()}.pdf"
     )
-    return send_file(
+    response = send_file(
         pdf_file,
         mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,
     )
+    # Rekap berisi data pribadi siswa; jangan disimpan cache browser/proxy.
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 # =====================================================
 # PROFILE PHOTO STORAGE
