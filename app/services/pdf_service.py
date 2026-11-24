@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from PIL import Image as PILImage, UnidentifiedImageError
+from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -51,6 +51,8 @@ BADGE_WIDTH = 13 * mm
 PHOTO_GUTTER = 5 * mm
 PHOTO_CELL_PAD = 5          # points
 PHOTO_MAX_HEIGHT = 58 * mm
+PHOTO_PRINT_DPI = 200       # resolusi maksimum foto yang disematkan di PDF
+PHOTO_JPEG_QUALITY = 85
 
 MONTHS_ID = (
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -108,6 +110,37 @@ class _ActraceLogo(Flowable):
         c.setFont("Helvetica", 6.5)
         c.drawString(18 * mm, 4.2 * mm, "DIGITAL ACTIVITY JOURNAL")
 
+        c.restoreState()
+
+
+class _EntrySeparator(Flowable):
+    """
+    Garis tipis antar-entri jurnal. Tidak digambar (tinggi nol) bila berada
+    di puncak halaman, sehingga tidak pernah muncul sebagai garis yatim
+    setelah page break.
+    """
+
+    def __init__(self, gap=6 * mm):
+        super().__init__()
+        self.gap = gap
+        self._skip = False
+
+    def wrap(self, availWidth, availHeight):
+        frame = getattr(self, "_frame", None)
+        self._skip = bool(getattr(frame, "_atTop", False))
+        self.width = availWidth
+
+        return availWidth, 0 if self._skip else self.gap
+
+    def draw(self):
+        if self._skip:
+            return
+
+        c = self.canv
+        c.saveState()
+        c.setStrokeColor(BORDER)
+        c.setLineWidth(0.5)
+        c.line(0, self.gap, self.width, self.gap)
         c.restoreState()
 
 
@@ -261,28 +294,77 @@ def _resolve_photo(photo, upload_root):
         return None
 
 
-def _make_photo_flowable(path, max_width=78 * mm, max_height=PHOTO_MAX_HEIGHT):
-    """Skala foto ke dalam kotak max_width x max_height tanpa crop/distorsi."""
-    try:
-        with PILImage.open(path) as source:
-            width, height = source.size
+def _prepare_photo(path, target_width_pt, target_height_pt):
+    """
+    Baca foto, terapkan orientasi EXIF, ratakan transparansi ke putih, dan
+    perkecil ke resolusi cetak yang cukup. Hasilnya disimpan di memori;
+    berkas asli di upload folder tidak pernah diubah.
 
-        if not width or not height:
+    Mengembalikan (buffer_jpeg, lebar_px, tinggi_px) atau None.
+    """
+    with PILImage.open(path) as source:
+        image = ImageOps.exif_transpose(source)
+        image.load()
+
+    if image.mode in ("RGBA", "LA") or (
+        image.mode == "P" and "transparency" in image.info
+    ):
+        rgba = image.convert("RGBA")
+        flattened = PILImage.new("RGB", rgba.size, (255, 255, 255))
+        flattened.paste(rgba, mask=rgba.getchannel("A"))
+        image = flattened
+    elif image.mode != "RGB":
+        image = image.convert("RGB")
+
+    width, height = image.size
+
+    if not width or not height:
+        return None
+
+    # Batas piksel untuk kualitas cetak ~PHOTO_PRINT_DPI pada ukuran tampil.
+    max_px_w = max(1, int(target_width_pt / 72 * PHOTO_PRINT_DPI))
+    max_px_h = max(1, int(target_height_pt / 72 * PHOTO_PRINT_DPI))
+
+    if width > max_px_w or height > max_px_h:
+        image.thumbnail((max_px_w, max_px_h), PILImage.LANCZOS)
+        width, height = image.size
+
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=PHOTO_JPEG_QUALITY, optimize=True)
+    buffer.seek(0)
+
+    return buffer, width, height
+
+
+def _make_photo_flowable(path, max_width=78 * mm, max_height=PHOTO_MAX_HEIGHT):
+    """
+    Skala foto ke dalam kotak max_width x max_height tanpa crop/distorsi.
+
+    Rasio aspek dihitung dari foto setelah orientasi EXIF diterapkan, dan
+    foto tidak pernah diperbesar melebihi ukuran aslinya (1 px = 1 pt).
+    """
+    try:
+        prepared = _prepare_photo(path, max_width, max_height)
+
+        if prepared is None:
             return None
 
-        scale = min(max_width / width, max_height / height, 1)
+        buffer, px_width, px_height = prepared
+
+        # Ukuran tampil dihitung dari piksel setelah koreksi orientasi.
+        scale = min(max_width / px_width, max_height / px_height, 1)
 
         flowable = Image(
-            str(path),
-            width=width * scale,
-            height=height * scale,
+            buffer,
+            width=px_width * scale,
+            height=px_height * scale,
         )
         flowable.hAlign = "CENTER"
 
         return flowable
 
     except (
-        OSError, ValueError, SyntaxError,
+        OSError, ValueError, SyntaxError, TypeError,
         UnidentifiedImageError, PILImage.DecompressionBombError,
     ):
         return None
@@ -494,10 +576,9 @@ def _photo_caption(photo, number):
     uploaded = _format_datetime(photo.get("uploaded_at"))
 
     return (
-        f"<b>Dokumentasi {number}</b><br/>"
-        f"{_paragraph(file_name, preserve_lines=False)}<br/>"
-        f"ID foto: {_paragraph(photo.get('photo_id', '-'), preserve_lines=False)}"
-        f" | Diunggah: {_paragraph(uploaded, preserve_lines=False)}"
+        f"<b>Dokumentasi {number}</b>"
+        f" &nbsp;·&nbsp; {_paragraph(file_name, preserve_lines=False)}<br/>"
+        f"Diunggah: {_paragraph(uploaded, preserve_lines=False)}"
     )
 
 
@@ -658,15 +739,21 @@ def _journal_entry(index, journal, photo_root, styles):
     # berfoto tidak terpisah dari baris foto pertamanya bila masih muat.
     min_space = 100 * mm if photos else 48 * mm
 
-    entry = [
-        CondPageBreak(min_space),
+    entry = [CondPageBreak(min_space)]
+
+    # Garis tipis memisahkan entri. Ditempatkan setelah CondPageBreak dan
+    # dilewati otomatis di puncak halaman.
+    if index > 1:
+        entry.append(_EntrySeparator())
+
+    entry.extend([
         header,
         Spacer(1, 2 * mm),
         Paragraph(meta_line, styles["ActraceMeta"]),
         Spacer(1, 3.5 * mm),
         body,
         Spacer(1, 4 * mm),
-    ]
+    ])
 
     if photos:
         entry.extend(_photo_gallery(photos, photo_root, styles))
@@ -687,7 +774,7 @@ def _journal_entry(index, journal, photo_root, styles):
             f"{_paragraph(_format_datetime(journal.get('updated_at')))}",
             styles["ActraceMeta"],
         ),
-        Spacer(1, 9 * mm),
+        Spacer(1, 6 * mm),
     ])
 
     return entry
