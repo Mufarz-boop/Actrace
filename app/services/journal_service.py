@@ -14,6 +14,10 @@ from app.services.photo_service import (
 
 logger = logging.getLogger(__name__)
 
+# Batas kolom journals.description (TEXT = 65.535 byte). Tanpa pemeriksaan ini,
+# MySQL non-strict dapat memotong deskripsi tanpa pesan kesalahan.
+MAX_DESCRIPTION_BYTES = 65535
+
 class JournalValidationError(Exception):
     """Kesalahan validasi data jurnal."""
 
@@ -54,6 +58,11 @@ def validate_journal_data(activity_date, title, description):
     if len(title) > 150:
         raise JournalValidationError(
             "Judul maksimal 150 karakter."
+        )
+
+    if len(description.encode("utf-8")) > MAX_DESCRIPTION_BYTES:
+        raise JournalValidationError(
+            "Deskripsi terlalu panjang."
         )
 
     try:
@@ -438,6 +447,7 @@ def update_journal(
     cursor = None
     saved_photos = []
     paths_to_delete = []
+    committed = False
 
     try:
         connection = get_db_connection()
@@ -530,10 +540,26 @@ def update_journal(
             )
 
         connection.commit()
+        committed = True
 
-        # File fisik baru dihapus hanya setelah transaksi DB berhasil.
+        # File fisik lama dihapus hanya setelah transaksi DB berhasil.
+        # Kegagalan pembersihan tidak boleh membatalkan perubahan yang sudah
+        # ter-commit, apalagi menghapus foto baru yang kini dirujuk database.
         if paths_to_delete:
-            delete_photo_files(paths_to_delete)
+            try:
+                failed_paths = delete_photo_files(paths_to_delete)
+            except Exception:
+                logger.exception(
+                    "Pembersihan file foto lama gagal. journal_id=%s",
+                    journal_id,
+                )
+            else:
+                if failed_paths:
+                    logger.error(
+                        "Sebagian file foto lama belum terhapus. "
+                        "journal_id=%s failed_files=%s",
+                        journal_id, failed_paths,
+                    )
 
         logger.info(
             "Jurnal diperbarui. journal_id=%s user_id=%s added=%s removed=%s",
@@ -550,7 +576,8 @@ def update_journal(
     except Error as exc:
         if connection and connection.is_connected():
             connection.rollback()
-        delete_saved_photos(saved_photos)
+        if not committed:
+            delete_saved_photos(saved_photos)
         logger.exception(
             "Database error saat memperbarui jurnal. journal_id=%s user_id=%s",
             journal_id, user_id
@@ -560,7 +587,8 @@ def update_journal(
     except Exception as exc:
         if connection and connection.is_connected():
             connection.rollback()
-        delete_saved_photos(saved_photos)
+        if not committed:
+            delete_saved_photos(saved_photos)
         logger.exception(
             "Kesalahan saat memperbarui jurnal. journal_id=%s user_id=%s",
             journal_id, user_id
@@ -589,6 +617,13 @@ def get_journals_for_report(user_id, start_date, end_date):
     """
     Mengambil jurnal milik siswa pada rentang tanggal inklusif,
     beserta seluruh metadata foto yang terhubung.
+
+    Mengembalikan list dict (urut activity_date, journal_id naik) dengan
+    kunci: journal_id, activity_date (date), title, description, created_at,
+    updated_at, photos (list: photo_id, journal_id, file_name, file_path,
+    uploaded_at; urut photo_id) dan photo_count (= len(photos)). List kosong
+    bila tidak ada jurnal. Kontrak ini dibaca oleh pdf_service dan halaman
+    Reports; jangan ubah nama kunci tanpa menyesuaikan keduanya.
     """
     if not user_id or not start_date or not end_date:
         raise JournalValidationError("Parameter rekap jurnal tidak valid.")
@@ -684,8 +719,16 @@ def get_gallery_photos(user_id, page=1, per_page=24):
     if not user_id:
         raise JournalSaveError("Sesi pengguna tidak valid.")
 
-    page = max(1, int(page))
-    per_page = max(1, min(int(per_page), 100))
+    try:
+        page = max(1, int(page))
+    except (TypeError, ValueError):
+        page = 1
+
+    try:
+        per_page = max(1, min(int(per_page), 100))
+    except (TypeError, ValueError):
+        per_page = 24
+
     offset = (page - 1) * per_page
 
     connection = None
@@ -751,10 +794,17 @@ def get_gallery_photos(user_id, page=1, per_page=24):
 
     finally:
         if cursor:
-            cursor.close()
+            try:
+                cursor.close()
+            except Error:
+                logger.exception("Gagal menutup cursor Gallery.")
 
         if connection:
-            connection.close()
+            try:
+                if connection.is_connected():
+                    connection.close()
+            except Error:
+                logger.exception("Gagal menutup koneksi Gallery.")
 
 # =====================================================
 # DELETE JOURNAL
