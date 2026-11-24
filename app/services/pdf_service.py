@@ -13,76 +13,182 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Image, KeepTogether, HRFlowable, Flowable,
+    PageBreak, Image, KeepTogether, HRFlowable, Flowable, CondPageBreak,
 )
 
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# DESIGN TOKENS
+# =============================================================================
+
+NAVY = colors.HexColor("#142D4E")
+TEAL = colors.HexColor("#0D9488")
+LIGHT = colors.HexColor("#F3F5F7")
+WHITE = colors.white
+TEXT = colors.HexColor("#1F2937")
+MUTED = colors.HexColor("#6B7280")
+BORDER = colors.HexColor("#DDE2E8")
+ERROR = colors.HexColor("#9F3434")
+
+# Alias lama dipertahankan agar kompatibel dengan kode lain yang mungkin
+# mengimpor nama warna dari modul ini.
+CYAN = TEAL
+BLUE = NAVY
+PALE = LIGHT
+
+PAGE_WIDTH, PAGE_HEIGHT = A4
+MARGIN_X = 19 * mm
+MARGIN_TOP = 23 * mm
+MARGIN_BOTTOM = 20 * mm
+USABLE_WIDTH = PAGE_WIDTH - 2 * MARGIN_X
+
+BADGE_WIDTH = 13 * mm
+PHOTO_GUTTER = 5 * mm
+PHOTO_CELL_PAD = 5          # points
+PHOTO_MAX_HEIGHT = 58 * mm
+
+MONTHS_ID = (
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+)
+WEEKDAYS_ID = ("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
+
+REPORT_LABEL = "LAPORAN REKAPITULASI JURNAL KEGIATAN"
+TAGLINE = "Every Activity Leaves a Trace."
+
+
+# =============================================================================
+# BRAND MARK
+# =============================================================================
+
 class _ActraceLogo(Flowable):
-    """Wordmark dan simbol geometris ACTRACE yang digambar langsung ke PDF."""
+    """Wordmark dan simbol ACTRACE yang digambar langsung ke PDF."""
 
     def __init__(self, width=66 * mm, height=18 * mm):
         super().__init__()
         self.width = width
         self.height = height
+        self.hAlign = "LEFT"
 
     def draw(self):
         c = self.canv
-
-        # Record-like geometric mark with a continuous activity trace.
         c.saveState()
-        c.setStrokeColor(CYAN)
-        c.setLineWidth(1.8)
-        c.roundRect(1, 2, 14 * mm, 14 * mm, 2 * mm, stroke=1, fill=0)
-        c.line(4 * mm, 11 * mm, 11 * mm, 11 * mm)
-        c.line(4 * mm, 8 * mm, 8 * mm, 8 * mm)
 
-        c.setStrokeColor(BLUE)
+        # Simbol: kotak navy dengan jejak aktivitas (pulse) putih.
+        c.setFillColor(NAVY)
+        c.roundRect(0, 2 * mm, 14 * mm, 14 * mm, 2.2 * mm, stroke=0, fill=1)
+
+        c.setStrokeColor(WHITE)
+        c.setLineWidth(1.4)
+        c.setLineCap(1)
+        c.setLineJoin(1)
         path = c.beginPath()
-        path.moveTo(3.5 * mm, 5 * mm)
-        path.lineTo(6 * mm, 7 * mm)
-        path.lineTo(8 * mm, 5.5 * mm)
-        path.lineTo(12 * mm, 9 * mm)
+        path.moveTo(2.6 * mm, 9 * mm)
+        path.lineTo(5.2 * mm, 9 * mm)
+        path.lineTo(6.6 * mm, 12.8 * mm)
+        path.lineTo(8.6 * mm, 5.2 * mm)
+        path.lineTo(10.0 * mm, 9 * mm)
+        path.lineTo(11.4 * mm, 9 * mm)
         c.drawPath(path, stroke=1, fill=0)
 
+        c.setFillColor(TEAL)
+        c.circle(11.4 * mm, 9 * mm, 0.9 * mm, stroke=0, fill=1)
+
+        # Wordmark.
         c.setFillColor(NAVY)
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(19 * mm, 6 * mm, "ACTRACE")
+        c.setFont("Helvetica-Bold", 17)
+        c.drawString(18 * mm, 8.6 * mm, "ACTRACE")
 
         c.setFillColor(MUTED)
         c.setFont("Helvetica", 6.5)
-        c.drawString(19 * mm, 2 * mm, "DIGITAL ACTIVITY JOURNAL")
+        c.drawString(18 * mm, 4.2 * mm, "DIGITAL ACTIVITY JOURNAL")
+
         c.restoreState()
 
 
-NAVY = colors.HexColor("#10243A")
-BLUE = colors.HexColor("#2563EB")
-CYAN = colors.HexColor("#21A6B5")
-TEXT = colors.HexColor("#334155")
-MUTED = colors.HexColor("#64748B")
-BORDER = colors.HexColor("#DCE5EE")
-PALE = colors.HexColor("#F3F7FA")
-WHITE = colors.white
+class _NumberedCanvas(pdfcanvas.Canvas):
+    """Canvas dua-pass agar nomor halaman dapat menampilkan total halaman."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        total = len(self._saved_page_states)
+
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self._draw_page_number(total)
+            super().showPage()
+
+        super().save()
+
+    def _draw_page_number(self, total):
+        # Halaman sampul tidak diberi nomor.
+        if self._pageNumber <= 1:
+            return
+
+        self.saveState()
+        self.setFillColor(MUTED)
+        self.setFont("Helvetica", 7.5)
+        self.drawRightString(
+            PAGE_WIDTH - MARGIN_X,
+            9 * mm,
+            f"Halaman {self._pageNumber} dari {total}",
+        )
+        self.restoreState()
+
+
+# =============================================================================
+# FORMAT HELPERS
+# =============================================================================
+
+def _to_date(value):
+    """Ubah date/datetime/string ISO menjadi date; None bila tidak dapat."""
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
+
+    return None
 
 
 def _format_date(value):
-    if isinstance(value, str):
-        try:
-            value = date.fromisoformat(value[:10])
-        except ValueError:
-            return value
+    parsed = _to_date(value)
 
-    if hasattr(value, "strftime"):
-        months = (
-            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-            "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-        )
-        return f"{value.day:02d} {months[value.month - 1]} {value.year}"
+    if parsed is not None:
+        return f"{parsed.day:02d} {MONTHS_ID[parsed.month - 1]} {parsed.year}"
 
-    return str(value) if value is not None else "-"
+    if value is None:
+        return "-"
+
+    return str(value)
+
+
+def _format_date_with_weekday(value):
+    parsed = _to_date(value)
+    formatted = _format_date(value)
+
+    if parsed is None:
+        return formatted
+
+    return f"{WEEKDAYS_ID[parsed.weekday()]}, {formatted}"
 
 
 def _format_datetime(value):
@@ -98,6 +204,13 @@ def _format_datetime(value):
     return str(value)
 
 
+def _safe_int(value):
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _paragraph(value, preserve_lines=True):
     """Escape seluruh konten pengguna sebelum diproses sebagai markup ReportLab."""
     text = escape(str(value if value is not None else ""))
@@ -108,6 +221,10 @@ def _paragraph(value, preserve_lines=True):
 
     return text
 
+
+# =============================================================================
+# PHOTO HANDLING
+# =============================================================================
 
 def _resolve_photo(photo, upload_root):
     """Resolve foto hanya dari file_path database dan batasi ke upload root."""
@@ -133,7 +250,10 @@ def _resolve_photo(photo, upload_root):
 
         return candidate
 
-    except (OSError, ValueError, TypeError, UnidentifiedImageError):
+    except (
+        OSError, ValueError, TypeError, SyntaxError,
+        UnidentifiedImageError, PILImage.DecompressionBombError,
+    ):
         logger.warning(
             "Foto jurnal tidak dapat digunakan pada PDF. photo_id=%s",
             photo.get("photo_id"),
@@ -141,7 +261,8 @@ def _resolve_photo(photo, upload_root):
         return None
 
 
-def _make_photo_flowable(path, max_width=78 * mm, max_height=55 * mm):
+def _make_photo_flowable(path, max_width=78 * mm, max_height=PHOTO_MAX_HEIGHT):
+    """Skala foto ke dalam kotak max_width x max_height tanpa crop/distorsi."""
     try:
         with PILImage.open(path) as source:
             width, height = source.size
@@ -160,122 +281,574 @@ def _make_photo_flowable(path, max_width=78 * mm, max_height=55 * mm):
 
         return flowable
 
-    except (OSError, ValueError, UnidentifiedImageError):
+    except (
+        OSError, ValueError, SyntaxError,
+        UnidentifiedImageError, PILImage.DecompressionBombError,
+    ):
         return None
 
+
+# =============================================================================
+# STYLES
+# =============================================================================
 
 def _build_styles():
     styles = getSampleStyleSheet()
 
-    styles.add(ParagraphStyle(
-        name="ActraceEyebrow",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=11,
-        textColor=MUTED,
-        tracking=1.0,
-        spaceAfter=5,
-    ))
+    def add(name, parent="Normal", **kwargs):
+        styles.add(ParagraphStyle(name=name, parent=styles[parent], **kwargs))
 
-    styles.add(ParagraphStyle(
-        name="ActraceCoverTitle",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=21,
-        leading=27,
-        alignment=TA_LEFT,
-        textColor=NAVY,
-        spaceAfter=8,
-    ))
+    add("ActraceEyebrow",
+        fontName="Helvetica-Bold", fontSize=8.5, leading=12,
+        textColor=TEAL, spaceAfter=6)
 
-    styles.add(ParagraphStyle(
-        name="ActraceSubtitle",
-        parent=styles["Normal"],
-        fontSize=9,
-        leading=14,
-        textColor=MUTED,
-    ))
+    add("ActraceCoverTitle", "Title",
+        fontName="Helvetica-Bold", fontSize=30, leading=36,
+        alignment=TA_LEFT, textColor=NAVY, spaceAfter=0)
 
-    styles.add(ParagraphStyle(
-        name="ActraceSection",
-        parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=14,
-        leading=18,
-        textColor=NAVY,
-        spaceBefore=4,
-        spaceAfter=9,
-    ))
+    add("ActraceSubtitle",
+        fontSize=9.5, leading=15, textColor=MUTED)
 
-    styles.add(ParagraphStyle(
-        name="ActraceJournalTitle",
-        parent=styles["Heading3"],
-        fontName="Helvetica-Bold",
-        fontSize=11,
-        leading=15,
-        textColor=NAVY,
-        spaceAfter=3,
-    ))
+    add("ActraceSection", "Heading2",
+        fontName="Helvetica-Bold", fontSize=14, leading=18,
+        textColor=NAVY, spaceBefore=0, spaceAfter=3, keepWithNext=1)
 
-    styles.add(ParagraphStyle(
-        name="ActraceBody",
-        parent=styles["BodyText"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=14,
-        textColor=TEXT,
-        spaceAfter=4,
-        splitLongWords=1,
-    ))
+    add("ActraceBlockTitle",
+        fontName="Helvetica-Bold", fontSize=8, leading=11,
+        textColor=NAVY, spaceAfter=5)
 
-    styles.add(ParagraphStyle(
-        name="ActraceMeta",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=7.5,
-        leading=11,
-        textColor=MUTED,
-        splitLongWords=1,
-    ))
+    add("ActraceDate",
+        fontName="Helvetica-Bold", fontSize=9.5, leading=13,
+        textColor=TEAL, spaceAfter=1)
 
-    styles.add(ParagraphStyle(
-        name="ActraceLabel",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=7.5,
-        leading=10,
-        textColor=MUTED,
-    ))
+    add("ActraceJournalTitle", "Heading3",
+        fontName="Helvetica-Bold", fontSize=12.5, leading=16,
+        textColor=NAVY, spaceBefore=0, spaceAfter=0, splitLongWords=1)
 
-    styles.add(ParagraphStyle(
-        name="ActraceStat",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=17,
-        leading=20,
-        textColor=NAVY,
-    ))
+    add("ActraceBadge",
+        fontName="Helvetica-Bold", fontSize=13, leading=16,
+        textColor=WHITE, alignment=TA_CENTER)
 
-    styles.add(ParagraphStyle(
-        name="ActraceSmall",
-        parent=styles["Normal"],
-        fontSize=8,
-        leading=11,
-        textColor=TEXT,
-    ))
+    add("ActraceBody", "BodyText",
+        fontName="Helvetica", fontSize=9.5, leading=15,
+        textColor=TEXT, spaceAfter=0, splitLongWords=1)
 
-    styles.add(ParagraphStyle(
-        name="ActraceCenter",
-        parent=styles["Normal"],
-        fontSize=9,
-        leading=14,
-        textColor=MUTED,
-        alignment=TA_CENTER,
-    ))
+    add("ActraceEmpty", "BodyText",
+        fontName="Helvetica-Oblique", fontSize=9, leading=14,
+        textColor=MUTED, splitLongWords=1)
+
+    add("ActraceMeta",
+        fontName="Helvetica", fontSize=7.5, leading=11,
+        textColor=MUTED, splitLongWords=1)
+
+    add("ActraceLabel",
+        fontName="Helvetica-Bold", fontSize=7.5, leading=10,
+        textColor=MUTED, keepWithNext=1)
+
+    add("ActraceStat",
+        fontName="Helvetica-Bold", fontSize=24, leading=28,
+        textColor=NAVY)
+
+    add("ActraceSmall",
+        fontSize=9, leading=13, textColor=TEXT, splitLongWords=1)
+
+    add("ActracePeriod",
+        fontName="Helvetica-Bold", fontSize=10, leading=14,
+        textColor=NAVY)
+
+    add("ActraceCenter",
+        fontSize=9.5, leading=15, textColor=MUTED, alignment=TA_CENTER)
 
     return styles
 
+
+# =============================================================================
+# LAYOUT HELPERS
+# =============================================================================
+
+def _accent_rule(width=28 * mm, space_before=0, space_after=4 * mm):
+    return HRFlowable(
+        width=width, thickness=2.2, color=TEAL, hAlign="LEFT",
+        spaceBefore=space_before, spaceAfter=space_after,
+    )
+
+
+def _section_heading(text, styles):
+    return [
+        Paragraph(_paragraph(text), styles["ActraceSection"]),
+        _accent_rule(),
+    ]
+
+
+def _key_value_table(rows, styles, label_width=46 * mm):
+    """Tabel identitas dua kolom dengan garis pemisah tipis."""
+    data = [
+        [
+            Paragraph(_paragraph(label), styles["ActraceLabel"]),
+            Paragraph(_paragraph(value), styles["ActraceSmall"]),
+        ]
+        for label, value in rows
+    ]
+
+    table = Table(data, colWidths=[label_width, USABLE_WIDTH - label_width])
+    table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LINEABOVE", (0, 0), (-1, 0), 1.2, NAVY),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.5, BORDER),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 9),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+    ]))
+
+    return table
+
+
+def _stat_cards(items, styles):
+    """Kartu statistik berjajar dengan jarak antar-kartu."""
+    gap = 4 * mm
+    count = len(items)
+    card_width = (USABLE_WIDTH - gap * (count - 1)) / count
+
+    cells = []
+    widths = []
+    style = [
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]
+
+    for index, (label, value) in enumerate(items):
+        col = index * 2
+
+        card = Table(
+            [
+                [Paragraph(_paragraph(value), styles["ActraceStat"])],
+                [Paragraph(_paragraph(label), styles["ActraceLabel"])],
+            ],
+            colWidths=[card_width],
+        )
+        card.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), LIGHT),
+            ("LINEABOVE", (0, 0), (-1, 0), 2.2, TEAL),
+            ("LEFTPADDING", (0, 0), (-1, -1), 11),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 11),
+            ("TOPPADDING", (0, 0), (0, 0), 12),
+            ("BOTTOMPADDING", (0, 0), (0, 0), 2),
+            ("TOPPADDING", (0, 1), (0, 1), 0),
+            ("BOTTOMPADDING", (0, 1), (0, 1), 12),
+        ]))
+
+        cells.append(card)
+        widths.append(card_width)
+
+        if index < count - 1:
+            cells.append("")
+            widths.append(gap)
+
+    table = Table([cells], colWidths=widths)
+    table.setStyle(TableStyle(style))
+
+    return table
+
+
+def _period_table(start_date, end_date, first_date, last_date, styles):
+    columns = [
+        ("PERIODE LAPORAN",
+         f"{_format_date(start_date)} – {_format_date(end_date)}"),
+        ("AKTIVITAS PERTAMA", first_date),
+        ("AKTIVITAS TERAKHIR", last_date),
+    ]
+
+    widths = [USABLE_WIDTH * 0.46, USABLE_WIDTH * 0.27, USABLE_WIDTH * 0.27]
+
+    table = Table(
+        [
+            [Paragraph(label, styles["ActraceLabel"]) for label, _ in columns],
+            [
+                Paragraph(_paragraph(value), styles["ActraceSmall"])
+                for _, value in columns
+            ],
+        ],
+        colWidths=widths,
+    )
+    table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.5, BORDER),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.5, BORDER),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, 0), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+        ("TOPPADDING", (0, 1), (-1, 1), 0),
+        ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+    ]))
+
+    return table
+
+
+def _photo_caption(photo, number):
+    file_name = photo.get("file_name") or "Nama file tidak tersedia"
+    uploaded = _format_datetime(photo.get("uploaded_at"))
+
+    return (
+        f"<b>Dokumentasi {number}</b><br/>"
+        f"{_paragraph(file_name, preserve_lines=False)}<br/>"
+        f"ID foto: {_paragraph(photo.get('photo_id', '-'), preserve_lines=False)}"
+        f" | Diunggah: {_paragraph(uploaded, preserve_lines=False)}"
+    )
+
+
+def _photo_cell(photo, number, cell_width, image, image_height, styles):
+    """
+    Satu sel foto: area gambar + keterangan.
+
+    `image` adalah Flowable gambar (atau None bila foto tidak dapat dipakai)
+    dan `image_height` tinggi area gambar yang dibagi seluruh sel pada baris
+    yang sama, sehingga tepi kartu dalam satu baris selalu sejajar.
+    """
+    caption = Paragraph(_photo_caption(photo, number), styles["ActraceMeta"])
+
+    if image is None:
+        image = Paragraph(
+            f"<font color='#{ERROR.hexval()[2:]}'>"
+            "File foto tidak tersedia<br/>atau tidak valid.</font>",
+            styles["ActraceCenter"],
+        )
+
+    cell = Table(
+        [[image], [caption]],
+        colWidths=[cell_width],
+        rowHeights=[image_height + 2 * PHOTO_CELL_PAD, None],
+    )
+    cell.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+        ("BACKGROUND", (0, 0), (0, 0), LIGHT),
+        ("ALIGN", (0, 0), (0, 0), "CENTER"),
+        ("VALIGN", (0, 0), (0, 0), "MIDDLE"),
+        ("LINEBELOW", (0, 0), (0, 0), 0.5, BORDER),
+        ("LEFTPADDING", (0, 0), (-1, -1), PHOTO_CELL_PAD),
+        ("RIGHTPADDING", (0, 0), (-1, -1), PHOTO_CELL_PAD),
+        ("TOPPADDING", (0, 0), (0, 0), PHOTO_CELL_PAD),
+        ("BOTTOMPADDING", (0, 0), (0, 0), PHOTO_CELL_PAD),
+        ("TOPPADDING", (0, 1), (0, 1), 6),
+        ("BOTTOMPADDING", (0, 1), (0, 1), 6),
+    ]))
+
+    return cell
+
+
+def _photo_gallery(photos, photo_root, styles):
+    """
+    Grid dua kolom. Setiap baris adalah tabel tersendiri sehingga halaman
+    dapat berpindah di antara baris foto tanpa memotong gambar.
+    """
+    label = Paragraph("DOKUMENTASI KEGIATAN", styles["ActraceLabel"])
+
+    cell_width = (USABLE_WIDTH - PHOTO_GUTTER) / 2
+    inner_width = cell_width - 2 * PHOTO_CELL_PAD
+    placeholder_height = 26 * mm
+
+    items = []
+
+    for number, photo in enumerate(photos, start=1):
+        path = _resolve_photo(photo, photo_root)
+        image = _make_photo_flowable(path, max_width=inner_width) if path else None
+        items.append((number, photo, image))
+
+    rows = []
+
+    for start in range(0, len(items), 2):
+        pair = items[start:start + 2]
+
+        image_height = max(
+            (image.drawHeight for _, _, image in pair if image is not None),
+            default=placeholder_height,
+        )
+
+        cells = [
+            _photo_cell(photo, number, cell_width, image, image_height, styles)
+            for number, photo, image in pair
+        ]
+
+        if len(items) == 1:
+            # Foto tunggal: tampil di tengah.
+            row = Table([[cells[0]]], colWidths=[cell_width], hAlign="CENTER")
+        else:
+            right_cell = cells[1] if len(cells) > 1 else ""
+            row = Table(
+                [[cells[0], "", right_cell]],
+                colWidths=[cell_width, PHOTO_GUTTER, cell_width],
+                hAlign="LEFT",
+            )
+
+        row.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+
+        rows.append(row)
+
+    flowables = [label, Spacer(1, 1.5 * mm)]
+
+    for position, row in enumerate(rows):
+        if position:
+            flowables.append(Spacer(1, PHOTO_GUTTER))
+        flowables.append(row)
+
+    # Label dan baris foto pertama selalu berada di halaman yang sama.
+    return [KeepTogether(flowables[:3])] + flowables[3:]
+
+
+def _journal_entry(index, journal, photo_root, styles):
+    """Susun seluruh flowable untuk satu entri jurnal."""
+    photos = journal.get("photos") or []
+    photo_count = (
+        len(photos) if "photos" in journal
+        else _safe_int(journal.get("photo_count"))
+    )
+
+    title = journal.get("title") or "Tanpa judul"
+    description = journal.get("description")
+
+    header = Table(
+        [[
+            Paragraph(f"{index:02d}", styles["ActraceBadge"]),
+            [
+                Paragraph(
+                    _paragraph(
+                        _format_date_with_weekday(journal.get("activity_date"))
+                    ),
+                    styles["ActraceDate"],
+                ),
+                Paragraph(_paragraph(title), styles["ActraceJournalTitle"]),
+            ],
+        ]],
+        colWidths=[BADGE_WIDTH, USABLE_WIDTH - BADGE_WIDTH],
+    )
+    header.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), NAVY),
+        ("BACKGROUND", (1, 0), (1, 0), LIGHT),
+        ("VALIGN", (0, 0), (0, 0), "MIDDLE"),
+        ("VALIGN", (1, 0), (1, 0), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (0, 0), 0),
+        ("RIGHTPADDING", (0, 0), (0, 0), 0),
+        ("LEFTPADDING", (1, 0), (1, 0), 12),
+        ("RIGHTPADDING", (1, 0), (1, 0), 12),
+        ("TOPPADDING", (0, 0), (-1, -1), 9),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+    ]))
+
+    meta_line = (
+        f"ID Jurnal: {_paragraph(journal.get('journal_id', '-'), False)}"
+        f" &nbsp;|&nbsp; Dokumentasi foto: {photo_count}"
+    )
+
+    if description is not None and str(description).strip():
+        body = Paragraph(_paragraph(description), styles["ActraceBody"])
+    else:
+        body = Paragraph("Tidak ada deskripsi kegiatan.", styles["ActraceEmpty"])
+
+    # Pastikan judul entri tidak terpisah dari awal deskripsinya, dan entri
+    # berfoto tidak terpisah dari baris foto pertamanya bila masih muat.
+    min_space = 100 * mm if photos else 48 * mm
+
+    entry = [
+        CondPageBreak(min_space),
+        header,
+        Spacer(1, 2 * mm),
+        Paragraph(meta_line, styles["ActraceMeta"]),
+        Spacer(1, 3.5 * mm),
+        body,
+        Spacer(1, 4 * mm),
+    ]
+
+    if photos:
+        entry.extend(_photo_gallery(photos, photo_root, styles))
+    else:
+        entry.append(Paragraph(
+            "Tidak ada dokumentasi foto untuk jurnal ini."
+            if not photo_count
+            else "Berkas foto tidak disertakan pada data laporan ini.",
+            styles["ActraceEmpty"],
+        ))
+
+    entry.extend([
+        Spacer(1, 3 * mm),
+        Paragraph(
+            f"Dibuat: {_paragraph(_format_datetime(journal.get('created_at')))}"
+            f" &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"Diperbarui: "
+            f"{_paragraph(_format_datetime(journal.get('updated_at')))}",
+            styles["ActraceMeta"],
+        ),
+        Spacer(1, 9 * mm),
+    ])
+
+    return entry
+
+
+# =============================================================================
+# PAGE CHROME (header / footer)
+# =============================================================================
+
+def _draw_footer(canvas):
+    canvas.setStrokeColor(BORDER)
+    canvas.setLineWidth(0.5)
+    canvas.line(MARGIN_X, 14 * mm, PAGE_WIDTH - MARGIN_X, 14 * mm)
+
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica-Oblique", 7.5)
+    canvas.drawString(MARGIN_X, 9 * mm, TAGLINE)
+
+
+def _draw_cover_page(canvas, document):
+    canvas.saveState()
+
+    # Pita navy tipis dengan aksen teal di tepi atas.
+    canvas.setFillColor(NAVY)
+    canvas.rect(0, PAGE_HEIGHT - 7 * mm, PAGE_WIDTH, 7 * mm, stroke=0, fill=1)
+    canvas.setFillColor(TEAL)
+    canvas.rect(0, PAGE_HEIGHT - 7 * mm, 38 * mm, 7 * mm, stroke=0, fill=1)
+
+    _draw_footer(canvas)
+    canvas.restoreState()
+
+
+def _draw_content_page(canvas, document):
+    canvas.saveState()
+
+    canvas.setStrokeColor(BORDER)
+    canvas.setLineWidth(0.5)
+    canvas.line(
+        MARGIN_X, PAGE_HEIGHT - 15 * mm,
+        PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 15 * mm,
+    )
+
+    canvas.setFillColor(NAVY)
+    canvas.setFont("Helvetica-Bold", 8)
+    canvas.drawString(MARGIN_X, PAGE_HEIGHT - 11 * mm, "ACTRACE")
+
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", 7.5)
+    canvas.drawRightString(
+        PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 11 * mm, REPORT_LABEL,
+    )
+
+    _draw_footer(canvas)
+    canvas.restoreState()
+
+
+# =============================================================================
+# REPORT SECTIONS
+# =============================================================================
+
+def _cover_story(student, start_date, end_date, generated_at, styles):
+    identity = [
+        ("NAMA LENGKAP", student.get("full_name") or "Tidak tersedia"),
+        ("NIS / NISN", student.get("student_code") or "Tidak tersedia"),
+        (
+            "PERIODE LAPORAN",
+            f"{_format_date(start_date)} – {_format_date(end_date)}",
+        ),
+        ("TANGGAL PEMBUATAN", _format_date(generated_at.date())),
+    ]
+
+    return [
+        _ActraceLogo(),
+        Spacer(1, 38 * mm),
+        Paragraph("LAPORAN KEGIATAN SISWA", styles["ActraceEyebrow"]),
+        Paragraph(
+            "Laporan Rekapitulasi<br/>Jurnal Kegiatan",
+            styles["ActraceCoverTitle"],
+        ),
+        _accent_rule(width=34 * mm, space_before=7 * mm, space_after=6 * mm),
+        Paragraph(
+            "Dokumen rekapitulasi aktivitas siswa berdasarkan periode "
+            "yang dipilih.",
+            styles["ActraceSubtitle"],
+        ),
+        Spacer(1, 26 * mm),
+        Paragraph("IDENTITAS SISWA", styles["ActraceBlockTitle"]),
+        _key_value_table(identity, styles),
+        PageBreak(),
+    ]
+
+
+def _summary_story(journals, start_date, end_date, styles):
+    unique_days = {
+        str(j.get("activity_date"))[:10]
+        for j in journals
+        if j.get("activity_date") is not None
+    }
+
+    total_photos = sum(len(j.get("photos") or []) for j in journals)
+
+    if not total_photos:
+        total_photos = sum(_safe_int(j.get("photo_count")) for j in journals)
+
+    parsed_dates = [
+        parsed for parsed in (_to_date(j.get("activity_date")) for j in journals)
+        if parsed is not None
+    ]
+
+    first_date = _format_date(min(parsed_dates)) if parsed_dates else "-"
+    last_date = _format_date(max(parsed_dates)) if parsed_dates else "-"
+
+    story = _section_heading("Ringkasan Kegiatan", styles)
+    story.extend([
+        Paragraph(
+            "Statistik berikut dihitung dari jurnal yang ditemukan pada "
+            "periode laporan.",
+            styles["ActraceSubtitle"],
+        ),
+        Spacer(1, 6 * mm),
+        _stat_cards(
+            [
+                ("TOTAL JURNAL", str(len(journals))),
+                ("HARI KEGIATAN", str(len(unique_days))),
+                ("DOKUMENTASI FOTO", str(total_photos)),
+            ],
+            styles,
+        ),
+        Spacer(1, 6 * mm),
+        _period_table(start_date, end_date, first_date, last_date, styles),
+        Spacer(1, 12 * mm),
+    ])
+
+    return story, len(unique_days), total_photos
+
+
+def _closing_story(journal_count, day_count, total_photos,
+                   start_date, end_date, generated_at, styles):
+    block = _section_heading("Penutup Laporan", styles)
+    block.extend([
+        Paragraph(
+            f"Laporan ini memuat {journal_count} jurnal kegiatan, "
+            f"{day_count} hari kegiatan tercatat, dan "
+            f"{total_photos} dokumentasi foto pada periode "
+            f"{_format_date(start_date)} sampai {_format_date(end_date)}.",
+            styles["ActraceBody"],
+        ),
+        Spacer(1, 5 * mm),
+        Paragraph(
+            f"Dokumen dibuat secara otomatis oleh ACTRACE "
+            f"pada {_format_date(generated_at.date())}.",
+            styles["ActraceMeta"],
+        ),
+    ])
+
+    return [Spacer(1, 4 * mm), KeepTogether(block)]
+
+
+# =============================================================================
+# PUBLIC API
+# =============================================================================
 
 def build_journal_report_pdf(
     student,
@@ -289,521 +862,58 @@ def build_journal_report_pdf(
     Informasi identitas yang tidak tersedia di database tidak direka.
     """
     output = BytesIO()
-    page_width, page_height = A4
-
-    left = right = 19 * mm
-    usable_width = page_width - left - right
     generated_at = datetime.now()
     journals = list(journals or [])
+    student = student or {}
 
     doc = SimpleDocTemplate(
         output,
         pagesize=A4,
-        rightMargin=right,
-        leftMargin=left,
-        topMargin=23 * mm,
-        bottomMargin=20 * mm,
+        rightMargin=MARGIN_X,
+        leftMargin=MARGIN_X,
+        topMargin=MARGIN_TOP,
+        bottomMargin=MARGIN_BOTTOM,
         title="Laporan Rekapitulasi Jurnal Kegiatan - ACTRACE",
         author="ACTRACE",
         subject="Rekapitulasi aktivitas siswa",
     )
 
     styles = _build_styles()
-    story = []
 
-    # =========================================
-    # COVER
-    # =========================================
+    story = _cover_story(student, start_date, end_date, generated_at, styles)
 
-    story.extend([
-        _ActraceLogo(),
-        Spacer(1, 8 * mm),
-        Paragraph(
-            "LAPORAN KEGIATAN SISWA",
-            styles["ActraceEyebrow"],
-        ),
-        HRFlowable(
-            width="100%",
-            thickness=2,
-            color=CYAN,
-            spaceBefore=2,
-            spaceAfter=12,
-        ),
-        Paragraph(
-            "LAPORAN REKAPITULASI<br/>JURNAL KEGIATAN",
-            styles["ActraceCoverTitle"],
-        ),
-        Paragraph(
-            "Dokumen rekapitulasi aktivitas siswa berdasarkan periode yang dipilih.",
-            styles["ActraceSubtitle"],
-        ),
-        Spacer(1, 13 * mm),
-    ])
-
-    identity = [
-        ("Nama lengkap", student.get("full_name") or "Tidak tersedia"),
-        ("NIS / NISN", student.get("student_code") or "Tidak tersedia"),
-        ("Kelas", "Tidak tersedia pada data akun"),
-        ("Jurusan", "Tidak tersedia pada data akun"),
-        ("Sekolah", "Tidak tersedia pada data akun"),
-        ("Instansi / tempat PKL", "Tidak tersedia pada data akun"),
-        (
-            "Periode laporan",
-            f"{_format_date(start_date)} – {_format_date(end_date)}",
-        ),
-        ("Tanggal pembuatan", _format_date(generated_at.date())),
-    ]
-
-    identity_rows = []
-
-    for label, value in identity:
-        identity_rows.append([
-            Paragraph(_paragraph(label), styles["ActraceLabel"]),
-            Paragraph(_paragraph(value), styles["ActraceSmall"]),
-        ])
-
-    identity_table = Table(
-        identity_rows,
-        colWidths=[48 * mm, usable_width - 48 * mm],
+    summary, day_count, total_photos = _summary_story(
+        journals, start_date, end_date, styles,
     )
+    story.extend(summary)
 
-    identity_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), PALE),
-        ("BOX", (0, 0), (-1, -1), 0.7, BORDER),
-        ("INNERGRID", (0, 0), (-1, -1), 0.35, BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ("TOPPADDING", (0, 0), (-1, -1), 9),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
-    ]))
-
-    story.extend([
-        identity_table,
-        Spacer(1, 15 * mm),
-    ])
-
-    story.append(Paragraph(
-        "Every Activity Leaves a Trace.",
-        ParagraphStyle(
-            "CoverTagline",
-            parent=styles["ActraceSubtitle"],
-            fontName="Helvetica-Oblique",
-            textColor=CYAN,
-            fontSize=10,
-        ),
-    ))
-
-    story.append(PageBreak())
-
-    # =========================================
-    # SUMMARY
-    # =========================================
-
-    unique_days = {
-        str(j.get("activity_date"))[:10]
-        for j in journals
-        if j.get("activity_date") is not None
-    }
-
-    total_photos = sum(
-        len(j.get("photos") or [])
-        for j in journals
-    )
-
-    if not total_photos:
-        total_photos = sum(
-            int(j.get("photo_count") or 0)
-            for j in journals
-        )
-
-    story.extend([
-        Paragraph(
-            "RINGKASAN KEGIATAN",
-            styles["ActraceSection"],
-        ),
-        Paragraph(
-            "Statistik berikut dihitung dari jurnal yang ditemukan pada periode laporan.",
-            styles["ActraceSubtitle"],
-        ),
-        Spacer(1, 5 * mm),
-    ])
-
-    stat_items = [
-        ("TOTAL JURNAL", str(len(journals))),
-        ("HARI KEGIATAN", str(len(unique_days))),
-        ("DOKUMENTASI FOTO", str(total_photos)),
-    ]
-
-    stat_cells = []
-
-    for label, value in stat_items:
-        stat_cells.append([
-            Paragraph(_paragraph(value), styles["ActraceStat"]),
-            Paragraph(_paragraph(label), styles["ActraceLabel"]),
-        ])
-
-    stat_table = Table(
-        [stat_cells],
-        colWidths=[usable_width / 3] * 3,
-    )
-
-    stat_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), PALE),
-        ("BOX", (0, 0), (-1, -1), 0.7, BORDER),
-        ("INNERGRID", (0, 0), (-1, -1), 0.5, BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 9),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 9),
-        ("TOPPADDING", (0, 0), (-1, -1), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-    ]))
-
-    story.extend([
-        stat_table,
-        Spacer(1, 7 * mm),
-    ])
-
-    first_date = (
-        _format_date(journals[0].get("activity_date"))
-        if journals else "-"
-    )
-
-    last_date = (
-        _format_date(journals[-1].get("activity_date"))
-        if journals else "-"
-    )
-
-    summary_rows = [
-        [
-            Paragraph("Aktivitas pertama", styles["ActraceLabel"]),
-            Paragraph("Aktivitas terakhir", styles["ActraceLabel"]),
-        ],
-        [
-            Paragraph(_paragraph(first_date), styles["ActraceSmall"]),
-            Paragraph(_paragraph(last_date), styles["ActraceSmall"]),
-        ],
-    ]
-
-    date_table = Table(
-        summary_rows,
-        colWidths=[usable_width / 2] * 2,
-    )
-
-    date_table.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.6, BORDER),
-        ("INNERGRID", (0, 0), (-1, -1), 0.4, BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 9),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 9),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-
-    story.append(date_table)
-    story.append(Spacer(1, 10 * mm))
-
-    story.append(Paragraph(
-        "DETAIL SELURUH JURNAL",
-        styles["ActraceSection"],
-    ))
+    story.extend(_section_heading("Detail Seluruh Jurnal", styles))
 
     if not journals:
-        story.append(Spacer(1, 10 * mm))
-
-        story.append(Paragraph(
-            "Tidak terdapat jurnal kegiatan pada rentang tanggal yang dipilih.",
-            styles["ActraceCenter"],
-        ))
-
+        story.extend([
+            Spacer(1, 8 * mm),
+            Paragraph(
+                "Tidak terdapat jurnal kegiatan pada rentang tanggal "
+                "yang dipilih.",
+                styles["ActraceCenter"],
+            ),
+        ])
     else:
+        story.append(Spacer(1, 2 * mm))
+
         for index, journal in enumerate(journals, start=1):
-            journal_id = journal.get("journal_id", "-")
-            photos = journal.get("photos") or []
+            story.extend(_journal_entry(index, journal, photo_root, styles))
 
-            photo_count = (
-                len(photos)
-                if "photos" in journal
-                else int(journal.get("photo_count") or 0)
-            )
-
-            heading = Paragraph(
-                f"{index:02d}. "
-                f"{_paragraph(journal.get('title') or 'Tanpa judul')}",
-                styles["ActraceJournalTitle"],
-            )
-
-            metadata = [
-                [
-                    Paragraph("ID JURNAL", styles["ActraceLabel"]),
-                    Paragraph("TANGGAL AKTIVITAS", styles["ActraceLabel"]),
-                    Paragraph("JUMLAH FOTO", styles["ActraceLabel"]),
-                ],
-                [
-                    Paragraph(_paragraph(journal_id), styles["ActraceSmall"]),
-                    Paragraph(
-                        _paragraph(_format_date(journal.get("activity_date"))),
-                        styles["ActraceSmall"],
-                    ),
-                    Paragraph(str(photo_count), styles["ActraceSmall"]),
-                ],
-            ]
-
-            meta_table = Table(
-                metadata,
-                colWidths=[
-                    usable_width * .22,
-                    usable_width * .52,
-                    usable_width * .26,
-                ],
-            )
-
-            meta_table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), PALE),
-                ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
-                ("INNERGRID", (0, 0), (-1, -1), 0.35, BORDER),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ]))
-
-            story.extend([
-                Spacer(1, 4 * mm),
-                heading,
-                meta_table,
-                Spacer(1, 3 * mm),
-                Paragraph(
-                    "DESKRIPSI KEGIATAN",
-                    styles["ActraceLabel"],
-                ),
-                Spacer(1, 1.5 * mm),
-                Paragraph(
-                    _paragraph(journal.get("description", "")),
-                    styles["ActraceBody"],
-                ),
-                Spacer(1, 2 * mm),
-            ])
-
-            # =========================================
-            # JOURNAL PHOTO DOCUMENTATION
-            # =========================================
-
-            if photos:
-                story.append(Paragraph(
-                    "DOKUMENTASI KEGIATAN",
-                    styles["ActraceLabel"],
-                ))
-
-                gallery_cells = []
-
-                for photo_index, photo in enumerate(photos, start=1):
-                    path = _resolve_photo(photo, photo_root)
-
-                    image_flowable = (
-                        _make_photo_flowable(path)
-                        if path else None
-                    )
-
-                    if image_flowable is None:
-                        cell = Paragraph(
-                            _paragraph(
-                                f"Dokumentasi {photo_index} | "
-                                f"{photo.get('file_name') or 'Nama file tidak tersedia'} | "
-                                f"ID foto: {photo.get('photo_id', '-')} | "
-                                f"Diunggah: {_format_datetime(photo.get('uploaded_at'))}"
-                            )
-                            + "<br/><font color='#9F3434'>"
-                            "File foto tidak tersedia atau tidak valid."
-                            "</font>",
-                            styles["ActraceSmall"],
-                        )
-
-                    else:
-                        cell = Table(
-                            [
-                                [image_flowable],
-                                [
-                                    Paragraph(
-                                        _paragraph(
-                                            f"Dokumentasi {photo_index} | "
-                                            f"{photo.get('file_name') or 'Nama file tidak tersedia'} | "
-                                            f"ID foto: {photo.get('photo_id', '-')} | "
-                                            f"Diunggah: {_format_datetime(photo.get('uploaded_at'))}"
-                                        ),
-                                        styles["ActraceMeta"],
-                                    )
-                                ],
-                            ],
-                            colWidths=[usable_width / 2 - 10],
-                        )
-
-                        cell.setStyle(TableStyle([
-                            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 1),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 1),
-                            ("TOPPADDING", (0, 0), (-1, -1), 1),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-                        ]))
-
-                    gallery_cells.append(cell)
-
-                rows = []
-
-                for i in range(0, len(gallery_cells), 2):
-                    left_cell = gallery_cells[i]
-
-                    right_cell = (
-                        gallery_cells[i + 1]
-                        if i + 1 < len(gallery_cells)
-                        else ""
-                    )
-
-                    rows.append([left_cell, right_cell])
-
-                gallery = Table(
-                    rows,
-                    colWidths=[usable_width / 2] * 2,
-                    hAlign="LEFT",
-                )
-
-                gallery.setStyle(TableStyle([
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                    ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.3, BORDER),
-                ]))
-
-                story.append(gallery)
-
-            else:
-                story.append(Paragraph(
-                    "Tidak ada dokumentasi foto untuk jurnal ini.",
-                    styles["ActraceMeta"],
-                ))
-
-            # =========================================
-            # JOURNAL TIMESTAMPS
-            # =========================================
-
-            story.extend([
-                Spacer(1, 2 * mm),
-                Paragraph(
-                    f"Dibuat: "
-                    f"{_paragraph(_format_datetime(journal.get('created_at')))}"
-                    f" &nbsp;&nbsp;|&nbsp;&nbsp; "
-                    f"Diperbarui: "
-                    f"{_paragraph(_format_datetime(journal.get('updated_at')))}",
-                    styles["ActraceMeta"],
-                ),
-                HRFlowable(
-                    width="100%",
-                    thickness=0.5,
-                    color=BORDER,
-                    spaceBefore=4 * mm,
-                    spaceAfter=2 * mm,
-                ),
-            ])
-
-    # =========================================
-    # CLOSING REPORT
-    # =========================================
-
-    story.extend([
-        Spacer(1, 6 * mm),
-
-        Paragraph(
-            "PENUTUP LAPORAN",
-            styles["ActraceSection"],
-        ),
-
-        Paragraph(
-            f"Laporan ini memuat {len(journals)} jurnal kegiatan, "
-            f"{len(unique_days)} hari kegiatan tercatat, dan "
-            f"{total_photos} dokumentasi foto pada periode "
-            f"{_format_date(start_date)} sampai {_format_date(end_date)}.",
-            styles["ActraceBody"],
-        ),
-
-        Spacer(1, 5 * mm),
-
-        Paragraph(
-            f"Dokumen dibuat secara otomatis oleh ACTRACE "
-            f"pada {_format_date(generated_at.date())}.",
-            styles["ActraceMeta"],
-        ),
-    ])
-
-    # =========================================
-    # PAGE HEADER & FOOTER
-    # =========================================
-
-    def draw_page(canvas, document):
-        canvas.saveState()
-
-        # Header line
-        canvas.setStrokeColor(BORDER)
-        canvas.setLineWidth(0.55)
-
-        canvas.line(
-            left,
-            page_height - 15 * mm,
-            page_width - right,
-            page_height - 15 * mm,
-        )
-
-        # Header title
-        canvas.setFillColor(NAVY)
-        canvas.setFont("Helvetica-Bold", 8)
-        canvas.drawString(
-            left,
-            page_height - 11 * mm,
-            "ACTRACE",
-        )
-
-        canvas.setFillColor(MUTED)
-        canvas.setFont("Helvetica", 7.5)
-        canvas.drawRightString(
-            page_width - right,
-            page_height - 11 * mm,
-            "LAPORAN REKAPITULASI JURNAL KEGIATAN",
-        )
-
-        # Footer line
-        canvas.line(
-            left,
-            14 * mm,
-            page_width - right,
-            14 * mm,
-        )
-
-        # Footer text
-        canvas.drawString(
-            left,
-            9 * mm,
-            "Every Activity Leaves a Trace.",
-        )
-
-        canvas.drawRightString(
-            page_width - right,
-            9 * mm,
-            f"Halaman {document.page}",
-        )
-
-        canvas.restoreState()
-
-    # =========================================
-    # BUILD PDF
-    # =========================================
+    story.extend(_closing_story(
+        len(journals), day_count, total_photos,
+        start_date, end_date, generated_at, styles,
+    ))
 
     doc.build(
         story,
-        onFirstPage=draw_page,
-        onLaterPages=draw_page,
+        onFirstPage=_draw_cover_page,
+        onLaterPages=_draw_content_page,
+        canvasmaker=_NumberedCanvas,
     )
 
     output.seek(0)

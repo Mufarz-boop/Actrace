@@ -6649,3 +6649,432 @@ html.js-reveal.is-revealing [data-stagger] {
         transition-duration: 0.01ms;
     }
 }
+
+/* ==========================================================================
+   ACTIVITY REPORTS - MOTION SYSTEM
+   Dipicu oleh static/js/reports-motion.js. Seluruh selektor dibatasi pada
+   .report-page (atau html.rp-*) sehingga tidak memengaruhi halaman lain.
+
+   - Keadaan awal (tersembunyi) HANYA berlaku bila <html> memiliki kelas
+     .rp-pre, yang dipasang skrip di <head> reports.html. Tanpa JavaScript
+     atau dengan prefers-reduced-motion, kelas itu tidak ada sehingga
+     halaman langsung tampil.
+   - Animasi masuk memakai fill-mode "backwards": setelah selesai tidak ada
+     gaya yang tertinggal, jadi hover dan interaksi tidak terpengaruh.
+   - Hanya transform dan opacity yang beranimasi pada reveal. Tidak ada
+     perubahan tata letak, sehingga tidak ada layout shift.
+   - Jarak dan durasi menyesuaikan ukuran layar (desktop / tablet / mobile).
+   ========================================================================== */
+
+.report-page {
+    --rp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --rp-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+    --rp-distance: 20px;       /* 12-24px */
+    --rp-dur: 680ms;           /* 500-850ms */
+
+    position: relative;
+    isolation: isolate;
+}
+
+@media (max-width: 1024px) {
+    .report-page {
+        --rp-distance: 16px;
+        --rp-dur: 600ms;
+    }
+}
+
+@media (max-width: 640px) {
+    .report-page {
+        --rp-distance: 12px;
+        --rp-dur: 520ms;
+    }
+}
+
+
+/* ---------- Atmosfer latar: fade halus, di belakang seluruh isi --------- */
+
+.report-page::before {
+    content: "";
+    position: absolute;
+    top: -28px;
+    right: 0;
+    left: 0;
+    z-index: -1;
+    height: 300px;
+
+    background:
+        radial-gradient(50% 70% at 22% 42%, rgba(36, 124, 131, 0.07), transparent 100%),
+        radial-gradient(38% 60% at 80% 36%, rgba(20, 45, 78, 0.035), transparent 100%);
+
+    /* Pudarkan semua tepi agar tidak ada garis kotak yang terlihat. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent);
+            mask-image: linear-gradient(to bottom, transparent, #000 38%, #000 62%, transparent);
+
+    opacity: 1;
+    pointer-events: none;
+    transition: opacity 900ms var(--rp-ease-soft);
+}
+
+html.rp-pre:not(.rp-play) .report-page::before {
+    opacity: 0;
+}
+
+
+/* ---------- Reveal masuk + scroll ------------------------------------- */
+
+html.rp-pre .report-page [data-rp]:not(.rp-in) {
+    opacity: 0;
+}
+
+@keyframes rp-rise {
+    from {
+        opacity: 0;
+        transform: translate3d(0, var(--rp-distance), 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes rp-rise-row {
+    from {
+        opacity: 0;
+        transform: translate3d(0, calc(var(--rp-distance) * 0.5), 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes rp-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.report-page [data-rp].rp-in {
+    animation: rp-rise var(--rp-dur) var(--rp-ease) backwards;
+    animation-delay: var(--rp-delay, 0ms);
+}
+
+/* Wadah daftar: hanya fade; gerak dibawa oleh baris di dalamnya. */
+.report-page [data-rp="fade"].rp-in {
+    animation-name: rp-fade;
+}
+
+/* Baris daftar: jarak lebih pendek, tidak menahan konten. */
+.report-page [data-rp="row"].rp-in {
+    animation-name: rp-rise-row;
+    animation-duration: calc(var(--rp-dur) * 0.8);
+}
+
+
+/* ---------- Kartu metrik ---------------------------------------------- */
+
+.report-metric {
+    transition:
+        transform var(--card-duration, 240ms) var(--motion-ease),
+        box-shadow var(--card-duration, 240ms) var(--motion-ease),
+        border-color var(--card-duration, 240ms) var(--motion-ease);
+}
+
+.report-metric span i {
+    display: inline-block;
+    transition: transform 280ms var(--rp-ease);
+}
+
+.report-metric strong,
+.report-total strong {
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* ---------- Kartu ekspor PDF ------------------------------------------ */
+
+.report-export {
+    transition:
+        box-shadow var(--card-duration, 240ms) var(--motion-ease),
+        border-color var(--card-duration, 240ms) var(--motion-ease);
+}
+
+.report-export__icon {
+    transition: transform 280ms var(--rp-ease);
+}
+
+
+/* ---------- Baris jurnal ---------------------------------------------- */
+
+.report-journal {
+    transition: background-color 200ms var(--rp-ease);
+}
+
+.report-journal__date {
+    transition: background-color 200ms var(--rp-ease);
+}
+
+.report-journal__summary-meta > a i {
+    transition: transform 220ms var(--rp-ease);
+}
+
+
+/* ---------- Hover: hanya perangkat dengan kursor ---------------------- */
+
+@media (hover: hover) and (pointer: fine) {
+    .report-metric:hover {
+        transform: translateY(var(--card-lift, -3px));
+        border-color: var(--card-border-hover, rgba(36, 124, 131, 0.38));
+        box-shadow: var(
+            --card-shadow-hover,
+            0 2px 4px rgba(20, 45, 78, 0.06),
+            0 18px 38px rgba(20, 45, 78, 0.12)
+        );
+    }
+
+    .report-metric:hover span i {
+        transform: translateY(-1px) scale(1.18) rotate(-6deg);
+    }
+
+    .report-export:hover {
+        border-color: var(--card-border-hover, rgba(36, 124, 131, 0.38));
+        box-shadow: 0 10px 26px rgba(20, 45, 78, 0.09);
+    }
+
+    .report-export:hover .report-export__icon {
+        transform: scale(1.07);
+    }
+
+    .report-journal:hover {
+        background: #F8FBFC;
+    }
+
+    .report-journal:hover .report-journal__date {
+        background: #E4F0F1;
+    }
+
+    .report-journal__summary-meta > a:hover i {
+        transform: translateX(3px);
+    }
+
+    .report-page .journals-back-link:hover .icon,
+    .report-page .journals-back-link:hover i {
+        transform: translateX(-3px);
+    }
+
+    .report-page .add-journal-button--submit:hover {
+        box-shadow: 0 8px 18px rgba(36, 124, 131, 0.22);
+    }
+
+    .report-date-field input:hover:not(:focus) {
+        border-color: rgba(36, 124, 131, 0.45);
+    }
+}
+
+.report-page .journals-back-link .icon,
+.report-page .journals-back-link i {
+    display: inline-block;
+    transition: transform 220ms var(--rp-ease);
+}
+
+
+/* ---------- Kontrol filter -------------------------------------------- */
+
+.report-date-field input {
+    transition:
+        border-color 180ms var(--rp-ease),
+        box-shadow 180ms var(--rp-ease),
+        background-color 180ms var(--rp-ease);
+}
+
+.report-filter__icon {
+    transition: transform 280ms var(--rp-ease);
+}
+
+.report-filter:focus-within .report-filter__icon {
+    transform: scale(1.06);
+}
+
+/* Putaran singkat saat tanggal berubah. */
+@keyframes rp-field-pulse {
+    from { box-shadow: 0 0 0 0 rgba(36, 124, 131, 0.3); }
+    to   { box-shadow: 0 0 0 7px rgba(36, 124, 131, 0); }
+}
+
+.report-date-field.is-changed input {
+    animation: rp-field-pulse 700ms var(--rp-ease);
+}
+
+/* Umpan balik tekan tombol. */
+.report-page .add-journal-button {
+    transition:
+        background .2s ease,
+        color .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+.report-page .add-journal-button:active {
+    transform: scale(0.97);
+}
+
+/* Titik "periode berubah, belum diterapkan". */
+.report-filter__submit {
+    position: relative;
+}
+
+.report-filter__submit::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 10px;
+    height: 10px;
+    background: #E0A030;
+    border: 2px solid #FFFFFF;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 240ms var(--rp-ease);
+    pointer-events: none;
+}
+
+.report-filter__submit[data-dirty="true"]::after {
+    transform: scale(1);
+}
+
+
+/* ---------- Status loading nyata (submit filter, ekspor PDF) ---------- */
+
+@keyframes rp-spin {
+    to { transform: rotate(360deg); }
+}
+
+.report-page .add-journal-button.is-loading {
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+.report-page .add-journal-button.is-loading > i {
+    display: none;
+}
+
+.report-page .add-journal-button.is-loading::before {
+    content: "";
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: rp-spin 700ms linear infinite;
+}
+
+.report-export__button.is-done {
+    background: #1E7F5C;
+    border-color: #1E7F5C;
+}
+
+
+/* ---------- Pesan galat dan empty state ------------------------------- */
+
+@keyframes rp-alert-in {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -6px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.report-alert:not([hidden]) {
+    animation: rp-alert-in 320ms var(--rp-ease);
+}
+
+@keyframes rp-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.82);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.report-page [data-rp].rp-in .report-empty__icon {
+    animation: rp-pop 520ms var(--rp-ease) backwards;
+    animation-delay: calc(var(--rp-delay, 0ms) + 180ms);
+}
+
+
+/* ---------- Teks khusus pembaca layar --------------------------------- */
+
+.report-page .rp-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+
+/* ---------- Reduced motion --------------------------------------------
+   - Reveal: langsung tampil, tanpa gerak.
+   - Hover: tanpa pergeseran; warna/bayangan berubah instan.
+   - Spinner tetap berputar karena menandakan proses nyata.
+   ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    html.rp-pre .report-page [data-rp]:not(.rp-in) {
+        opacity: 1;
+    }
+
+    html.rp-pre:not(.rp-play) .report-page::before {
+        opacity: 1;
+    }
+
+    .report-page::before,
+    .report-metric,
+    .report-metric span i,
+    .report-export,
+    .report-export__icon,
+    .report-journal,
+    .report-journal__date,
+    .report-journal__summary-meta > a i,
+    .report-date-field input,
+    .report-filter__icon,
+    .report-filter__submit::after,
+    .report-page .journals-back-link .icon,
+    .report-page .journals-back-link i,
+    .report-page .add-journal-button {
+        transition-duration: 0.01ms;
+    }
+
+    .report-page [data-rp].rp-in,
+    .report-page [data-rp].rp-in .report-empty__icon,
+    .report-alert:not([hidden]),
+    .report-date-field.is-changed input {
+        animation: none;
+    }
+
+    .report-metric:hover,
+    .report-metric:hover span i,
+    .report-export:hover .report-export__icon,
+    .report-journal__summary-meta > a:hover i,
+    .report-page .journals-back-link:hover .icon,
+    .report-page .journals-back-link:hover i,
+    .report-filter:focus-within .report-filter__icon,
+    .report-page .add-journal-button:active {
+        transform: none;
+    }
+
+    .report-page .add-journal-button.is-loading::before {
+        animation-duration: 1.4s;
+    }
+}

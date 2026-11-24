@@ -2,24 +2,53 @@
 
 {% block title %}Activity Reports{% endblock %}
 
+{% block head %}
+<!-- Keadaan awal animasi Reports. Dipasang di <head> agar tidak ada kilatan
+     konten. Dilewati untuk reduced motion dan tombol Back/Forward. Tanpa
+     JavaScript kelas ini tidak ada, jadi seluruh halaman langsung tampil.
+     Jaring pengaman: dilepas bila reports-motion.js tidak pernah siap. -->
+<script>
+    (function () {
+        var root = document.documentElement;
+
+        try {
+            if (window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return;
+            }
+
+            var nav = window.performance.getEntriesByType('navigation');
+            if (nav && nav.length && nav[0].type === 'back_forward') return;
+        } catch (err) { /* lanjutkan dengan reveal */ }
+
+        root.classList.add('rp-pre');
+
+        window.setTimeout(function () {
+            if (!window.__rpReady) root.classList.remove('rp-pre', 'rp-play');
+        }, 3500);
+    })();
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="report-page">
 
     <!-- PAGE HEADER -->
     <header class="report-page__heading">
         <div>
-            <span class="section-eyebrow">
+            <span class="section-eyebrow" data-rp>
                 DOCUMENTATION &amp; EXPORT
             </span>
-            <h1>Activity Reports</h1>
-            <p>
+            <h1 data-rp>Activity Reports</h1>
+            <p data-rp>
                 Buat laporan jurnal kegiatan berdasarkan periode
                 yang dipilih.
             </p>
         </div>
 
         <a href="{{ url_for('student.dashboard') }}"
-           class="journals-back-link">
+           class="journals-back-link"
+           data-rp>
             <i class="fas fa-arrow-left"></i>
             Kembali ke Dashboard
         </a>
@@ -28,7 +57,8 @@
 
     <!-- DATE FILTER -->
     <section class="report-filter panel"
-             aria-labelledby="report-filter-title">
+             aria-labelledby="report-filter-title"
+             data-rp>
 
         <div class="panel__header">
             <div>
@@ -95,12 +125,14 @@
     </section>
 
 
+    <span class="rp-sr" id="rp-status" role="status" aria-live="polite"></span>
+
     {% if not error %}
 
     <!-- REPORT SUMMARY -->
     <section class="report-result">
 
-        <div class="report-result__top">
+        <div class="report-result__top" data-rp>
             <div>
                 <span class="section-eyebrow">
                     HASIL PENYARINGAN
@@ -116,7 +148,7 @@
             </div>
 
             <div class="report-total">
-                <strong>{{ total_journals }}</strong>
+                <strong data-rp-count="{{ total_journals }}" data-rp-key="total">{{ total_journals }}</strong>
                 <span>Total jurnal</span>
             </div>
         </div>
@@ -125,35 +157,35 @@
         <!-- STATISTICS -->
         <div class="report-metrics">
 
-            <div class="report-metric">
+            <div class="report-metric" data-rp>
                 <span>
                     <i class="fas fa-book"></i>
                     Total jurnal
                 </span>
-                <strong>{{ total_journals }}</strong>
+                <strong data-rp-count="{{ total_journals }}" data-rp-key="total">{{ total_journals }}</strong>
             </div>
 
-            <div class="report-metric">
+            <div class="report-metric" data-rp>
                 <span>
                     <i class="fas fa-camera"></i>
                     Dokumentasi foto
                 </span>
-                <strong>{{ total_photos }}</strong>
+                <strong data-rp-count="{{ total_photos }}" data-rp-key="photos">{{ total_photos }}</strong>
             </div>
 
-            <div class="report-metric">
+            <div class="report-metric" data-rp>
                 <span>
                     <i class="fas fa-calendar-check"></i>
                     Hari kegiatan
                 </span>
-                <strong>{{ total_activity_days }}</strong>
+                <strong data-rp-count="{{ total_activity_days }}" data-rp-key="days">{{ total_activity_days }}</strong>
             </div>
 
         </div>
 
 
         <!-- PDF EXPORT -->
-        <div class="report-export panel">
+        <div class="report-export panel" data-rp>
 
             <div class="report-export__copy">
 
@@ -200,13 +232,13 @@
 
 
         <!-- COMPACT JOURNAL LIST -->
-        <div class="report-journal-list">
+        <div class="report-journal-list" data-rp="fade">
 
             {% if journals %}
 
                 {% for journal in journals %}
 
-                <article class="report-journal report-journal--compact">
+                <article class="report-journal report-journal--compact" data-rp="row">
 
                     <!-- ACTIVITY DATE -->
                     <div class="report-journal__date">
@@ -308,99 +340,11 @@
 
 {% block scripts %}
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const form = document.getElementById(
-        "report-filter-form"
-    );
-
-    const start = document.getElementById(
-        "start_date"
-    );
-
-    const end = document.getElementById(
-        "end_date"
-    );
-
-    const error = document.getElementById(
-        "report-client-error"
-    );
-
-    const exportButton = document.getElementById(
-        "report-export-button"
-    );
-
-
-    // DATE VALIDATION
-    if (start && end) {
-
-        end.min = start.value || "";
-
-        start.addEventListener("change", function () {
-
-            end.min = start.value || "";
-
-            if (
-                end.value &&
-                start.value &&
-                end.value < start.value
-            ) {
-                end.value = start.value;
-            }
-
-        });
-
-    }
-
-
-    // FORM SUBMISSION
-    if (form) {
-
-        form.addEventListener("submit", function (event) {
-
-            error.hidden = true;
-
-            if (
-                start.value &&
-                end.value &&
-                start.value > end.value
-            ) {
-
-                event.preventDefault();
-
-                error.textContent =
-                    "Tanggal awal tidak boleh melewati tanggal akhir.";
-
-                error.hidden = false;
-
-            }
-
-        });
-
-    }
-
-
-    // PDF GENERATION LOADING
-    if (exportButton) {
-
-        exportButton.addEventListener("click", function () {
-
-            exportButton.classList.add("is-loading");
-
-            exportButton.setAttribute(
-                "aria-disabled",
-                "true"
-            );
-
-            exportButton.querySelector("span").textContent =
-                "Menyiapkan PDF...";
-
-        });
-
-    }
-
-});
-</script>
+<!-- Validasi tanggal, status loading, ekspor PDF, dan seluruh animasi
+     halaman ini ada di reports-motion.js. -->
+<script
+    src="{{ url_for('static', filename='js/reports-motion.js') }}"
+    defer
+></script>
 
 {% endblock %}
