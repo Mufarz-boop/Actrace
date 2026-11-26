@@ -1,34 +1,97 @@
 /* ==========================================================================
    ACTRACE | auth.css
    Halaman autentikasi (Phase 01: Login). Bergantung pada token di style.css.
+   Redesain visual: panel seni gelap sinematik di kiri, panel putih bersih
+   di kanan, dibingkai kontainer membulat. Hanya lapisan presentasi; struktur
+   HTML, nama class, dan hook JavaScript (data-*) tidak berubah.
    Breakpoint: >=1024 desktop | 768-1023 tablet | <768 mobile
    ========================================================================== */
 
-/* ---------- Layout split-screen ---------- */
-.auth-layout {
+/* ---------- Token khusus halaman autentikasi ---------- */
+.auth-body {
+  --auth-accent: #D63C2E;        /* kontras 4.6:1 dengan teks putih */
+  --auth-accent-dark: #B83024;
+  --auth-ring: 0 0 0 3px rgba(214, 60, 46, 0.18);
+  --auth-input-border: #E3E6EB;
+  --auth-ink: #14171F;
+  --auth-frame-radius: 2rem;
+  --auth-panel-radius: 1.5rem;
+  --auth-frame-pad: 0.5rem;
+
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  place-items: center;
   min-height: 100vh;
   min-height: 100dvh;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  /* Latar belakang: karya gelap di kiri, abu-abu terang di kanan dengan sisi miring */
+  background-color: #0A1220;
+  background-image:
+    radial-gradient(ellipse 50% 60% at 15% 20%, rgba(196, 86, 58, 0.35), transparent 70%),
+    linear-gradient(104deg, #0A1220 0 52%, #ECEEF1 52.1% 100%);
 }
 
-/* ---------- Brand section ---------- */
+/* ---------- Layout split-screen (kontainer membulat) ---------- */
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 68rem;
+  min-height: min(42rem, calc(100dvh - 4rem));
+  padding: var(--auth-frame-pad);
+  overflow: hidden;
+  background-color: var(--color-surface);
+  border-radius: var(--auth-frame-radius);
+  box-shadow: 0 24px 64px rgba(5, 10, 20, 0.35);
+}
+
+/* ---------- Brand section: panel seni ---------- */
 .brand {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   color: #FFFFFF;
-  background-color: var(--color-navy);
-  /* Pola titik halus sebagai tekstur, memudar ke arah kanan bawah */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1.2px);
-  background-size: 24px 24px;
+  border-radius: var(--auth-panel-radius);
+  background-color: #070C18;
+  /* Bintang: tiga lapisan titik jarang dengan jarak berbeda (bilangan prima) agar tidak terlihat seperti grid */
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.55) 0.7px, transparent 1.2px),
+    radial-gradient(rgba(255, 255, 255, 0.35) 0.6px, transparent 1.1px),
+    radial-gradient(rgba(255, 220, 200, 0.3) 0.6px, transparent 1.1px),
+    linear-gradient(170deg, #0F1A30 0%, #0A1222 45%, #060A14 100%);
+  background-size: 173px 149px, 107px 131px, 71px 89px, auto;
+  background-position: 11px 17px, 53px 29px, 7px 61px, 0 0;
 }
 
+/* Cahaya atmosfer: batuan merah-jingga di kiri atas, cakrawala oranye di bawah */
 .brand::before {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: -2;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(20, 45, 78, 0) 30%, var(--color-navy) 95%);
+  background:
+    radial-gradient(circle at 63% 37%, #F2B089 0 5px, rgba(242, 176, 137, 0.25) 6px 9px, transparent 10px),
+    radial-gradient(ellipse 55% 50% at 8% 10%, rgba(214, 96, 64, 0.62), transparent 72%),
+    radial-gradient(ellipse 40% 38% at 26% 34%, rgba(150, 48, 44, 0.42), transparent 72%),
+    radial-gradient(ellipse 85% 26% at 62% 80%, rgba(236, 122, 62, 0.6), transparent 72%);
+}
+
+/* Siluet pegunungan */
+.brand::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  height: 44%;
+  pointer-events: none;
+  background: linear-gradient(to top, #04070E 0%, #0B1322 55%, #1A1A28 100%);
+  clip-path: polygon(
+    0 64%, 7% 50%, 13% 60%, 21% 32%, 27% 52%, 35% 18%, 43% 48%,
+    51% 36%, 59% 58%, 67% 26%, 76% 54%, 85% 40%, 93% 58%, 100% 46%,
+    100% 100%, 0 100%
+  );
 }
 
 .brand__inner {
@@ -36,11 +99,11 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2rem;
   height: 100%;
   max-width: 36rem;
   margin-inline: auto;
-  padding: clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.75rem, 4vw, 3rem);
 }
 
 .brand__logo {
@@ -69,9 +132,12 @@
   line-height: 1;
 }
 
+/* Teks berada di bawah panel, seperti informasi kreator pada referensi */
 .brand__copy {
   display: grid;
-  gap: 1rem;
+  gap: 0.875rem;
+  margin-top: auto;
+  text-shadow: 0 1px 12px rgba(4, 7, 14, 0.6);
 }
 
 .brand__tagline {
@@ -84,27 +150,32 @@
 
 .brand__intro {
   max-width: 34ch;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.8);
 }
 
+/* Ilustrasi bawaan tetap dipakai, kini sebagai lapisan dekoratif halus di belakang teks */
 .brand__visual {
-  align-self: flex-start;
-  width: 100%;
-  max-width: 27.5rem;
-  height: clamp(15rem, 46vh, 25rem);
-  margin-top: auto;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 75%;
+  max-width: 26rem;
+  height: clamp(13rem, 40vh, 22rem);
   object-fit: contain;
-  object-position: left bottom;
+  object-position: right bottom;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
-/* ---------- Authentication section ---------- */
+/* ---------- Authentication section: panel putih ---------- */
 .auth {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background-color: var(--color-bg);
+  background-color: var(--color-surface);
 }
 
 .auth__center {
@@ -115,30 +186,32 @@
   padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem);
 }
 
+/* Kartu menyatu dengan panel putih: tanpa border dan bayangan */
 .auth-card {
   width: 100%;
-  max-width: 26.5rem;
-  padding: clamp(1.5rem, 4vw, 2.5rem);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  max-width: 24rem;
+  padding: 0;
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .auth-card__header {
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .auth-card__title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: var(--color-navy);
+  font-size: clamp(2rem, 3.4vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: var(--auth-ink);
 }
 
 .auth-card__subtitle {
-  margin-top: 0.5rem;
+  margin-top: 0.625rem;
   font-size: 0.9375rem;
   color: var(--color-text-muted);
 }
@@ -188,7 +261,7 @@
 /* ---------- Form ---------- */
 .form {
   display: grid;
-  gap: 1.25rem;
+  gap: 1.125rem;
 }
 
 .field {
@@ -197,9 +270,9 @@
 }
 
 .field__label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--auth-ink);
 }
 
 .field__control {
@@ -211,7 +284,9 @@
 .field__icon {
   position: absolute;
   left: 0.875rem;
-  color: var(--color-text-muted);
+  width: 18px;
+  height: 18px;
+  color: #98A2B3;
   pointer-events: none;
   transition: color 0.15s ease;
 }
@@ -219,12 +294,12 @@
 .field__input {
   width: 100%;
   height: 3rem;
-  padding: 0 0.875rem 0 2.75rem;
+  padding: 0 0.875rem 0 2.625rem;
   font-size: 1rem; /* 16px mencegah zoom otomatis di iOS */
-  color: var(--color-text);
+  color: var(--auth-ink);
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--auth-input-border);
+  border-radius: 0.75rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -233,21 +308,21 @@
 }
 
 .field__input::placeholder {
-  color: var(--color-placeholder);
+  color: #98A2B3;
 }
 
 .field__input:hover {
-  border-color: #94A3B8;
+  border-color: #C4CAD4;
 }
 
 .field__input:focus {
   outline: none;
-  border-color: var(--color-teal);
-  box-shadow: var(--focus-ring);
+  border-color: var(--auth-accent);
+  box-shadow: var(--auth-ring);
 }
 
 .field__control:focus-within .field__icon {
-  color: var(--color-teal);
+  color: var(--auth-accent);
 }
 
 .field__toggle {
@@ -258,7 +333,7 @@
   width: 2.75rem;
   height: 2.75rem;
   padding: 0;
-  color: var(--color-text-muted);
+  color: #98A2B3;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -266,8 +341,13 @@
 }
 
 .field__toggle:hover {
-  color: var(--color-navy);
-  background-color: var(--color-bg);
+  color: var(--auth-ink);
+  background-color: #F3F4F7;
+}
+
+.field__toggle:focus-visible {
+  outline: 2px solid var(--auth-accent);
+  outline-offset: 0;
 }
 
 .field__toggle .icon-eye-off,
@@ -291,19 +371,19 @@
   font-size: 1rem;
   font-weight: 600;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
 .btn--primary {
-  margin-top: 0.25rem;
+  margin-top: 0.75rem;
   color: #FFFFFF;
-  background-color: var(--color-navy);
+  background-color: var(--auth-accent);
 }
 
 .btn--primary:hover {
-  background-color: var(--color-navy-dark);
-  box-shadow: 0 6px 16px rgba(20, 45, 78, 0.25);
+  background-color: var(--auth-accent-dark);
+  box-shadow: 0 8px 20px rgba(214, 60, 46, 0.28);
 }
 
 .btn--primary:active {
@@ -312,14 +392,14 @@
 }
 
 .btn--primary:focus-visible {
-  outline: 2px solid var(--color-teal);
+  outline: 2px solid var(--auth-ink);
   outline-offset: 3px;
 }
 
 .btn.is-loading {
   cursor: progress;
   pointer-events: none;
-  background-color: var(--color-navy);
+  background-color: var(--auth-accent);
   opacity: 0.85;
   box-shadow: none;
 }
@@ -370,8 +450,8 @@
   }
 
   .brand__inner {
-    gap: 2rem;
-    padding: 2.25rem 2rem;
+    gap: 1.5rem;
+    padding: 2rem 1.75rem;
   }
 
   .brand__tagline {
@@ -379,11 +459,11 @@
   }
 
   .brand__intro {
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
 
   .brand__visual {
-    height: clamp(12.5rem, 34vh, 20rem);
+    height: clamp(11rem, 30vh, 17rem);
   }
 }
 
@@ -392,9 +472,22 @@
    Satu kolom. Brand menjadi pita ringkas di atas; form tetap fokus utama.
    ========================================================================== */
 @media (max-width: 767px) {
+  .auth-body {
+    background-image: linear-gradient(180deg, #0A1220 0 14rem, #ECEEF1 14rem 100%);
+  }
+
   .auth-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
+    min-height: 0;
+    --auth-frame-radius: 1.5rem;
+    --auth-panel-radius: 1.125rem;
+  }
+
+  /* Siluet pegunungan terlalu besar untuk pita ringkas */
+  .brand::after {
+    height: 38%;
+    opacity: 0.9;
   }
 
   .brand__inner {
@@ -414,6 +507,7 @@
 
   .brand__copy {
     gap: 0;
+    margin-top: 0;
   }
 
   .brand__tagline {
@@ -430,14 +524,14 @@
 
   .auth__center {
     align-items: flex-start;
-    padding: 1.5rem 1rem 1rem;
+    padding: 1.75rem 1rem 1rem;
   }
 
-  .auth-card {
-    box-shadow: 0 1px 2px rgba(20, 45, 78, 0.05), 0 8px 24px rgba(20, 45, 78, 0.06);
+  .auth-card__header {
+    margin-bottom: 1.5rem;
   }
 
   .auth-card__title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 }
