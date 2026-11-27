@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -100,6 +99,21 @@ class Config:
         "SHARED_API_KEY", "").strip()
 
     # -----------------------------------------------------
+    # Account Provisioning (form buat akun, Alt + F1 + U)
+    # -----------------------------------------------------
+    # Fitur ini MATI secara default. Jika dimatikan, route dan
+    # seluruh markup/JS/CSS-nya tidak ada sama sekali (404).
+
+    ACCOUNT_PROVISIONING_ENABLED = env_bool(
+        "ACCOUNT_PROVISIONING_ENABLED",
+        False
+    )
+
+    PROVISIONING_ACCESS_CODE = os.getenv(
+        "PROVISIONING_ACCESS_CODE", ""
+    ).strip()
+
+    # -----------------------------------------------------
     # Upload Configuration
     # -----------------------------------------------------
 
@@ -196,6 +210,26 @@ class Config:
             errors.append(
                 "SHARED_API_KEY harus berbeda dari SECRET_KEY."
             )
+
+        # -------------------------------------------------
+        # 4b. ACCOUNT PROVISIONING VALIDATION
+        # -------------------------------------------------
+
+        if cls.ACCOUNT_PROVISIONING_ENABLED:
+
+            code = cls.PROVISIONING_ACCESS_CODE
+
+            if len(code) < 16:
+                errors.append(
+                    "PROVISIONING_ACCESS_CODE wajib minimal 16 "
+                    "karakter jika ACCOUNT_PROVISIONING_ENABLED aktif."
+                )
+
+            elif code in {cls.SECRET_KEY, cls.SHARED_API_KEY}:
+                errors.append(
+                    "PROVISIONING_ACCESS_CODE harus berbeda dari "
+                    "SECRET_KEY dan SHARED_API_KEY."
+                )
 
         # -------------------------------------------------
         # 5. UPLOAD VALIDATION

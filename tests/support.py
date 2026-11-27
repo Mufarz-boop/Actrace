@@ -166,6 +166,7 @@ class FakeConnection:
 _DB_MODULES = (
     "app.db",
     "app.auth.routes",
+    "app.services.account_service",
     "app.api.routes",
     "app.student.routes",
     "app.services.journal_service",

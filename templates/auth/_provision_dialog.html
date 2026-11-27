@@ -1,0 +1,162 @@
+{#
+  ACTRACE | _provision_dialog.html
+  Dialog "Buat akun baru". Di-include dari login.html HANYA jika
+  ACCOUNT_PROVISIONING_ENABLED aktif. Dibuka lewat Alt + F1 + U
+  (static/js/provision.js) atau otomatis setelah server menolak kiriman form.
+  Validasi sebenarnya ada di server (app/services/account_service.py).
+#}
+
+{% set perr = provision_errors or {} %}
+{% set pf = provision_form or {} %}
+
+{% macro prov_field(name, label, icon, err, value='', type='text', autocomplete='off', maxlength=100, placeholder='', toggle=False, hint='') %}
+<div class="field">
+    <label class="field__label" for="prov-{{ name }}">{{ label }}</label>
+
+    <div class="field__control">
+        <svg class="icon field__icon" aria-hidden="true" focusable="false">
+            <use href="#{{ icon }}"></use>
+        </svg>
+
+        <input
+            class="field__input{% if toggle %} field__input--has-action{% endif %}"
+            type="{{ type }}"
+            id="prov-{{ name }}"
+            name="{{ name }}"
+            value="{{ value }}"
+            placeholder="{{ placeholder }}"
+            autocomplete="{{ autocomplete }}"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            maxlength="{{ maxlength }}"
+            required
+            aria-required="true"
+            aria-describedby="prov-{{ name }}-error{% if hint %} prov-{{ name }}-hint{% endif %}"
+            {% if err %}aria-invalid="true"{% endif %}
+        >
+
+        {% if toggle %}
+        <button
+            class="field__toggle"
+            type="button"
+            aria-controls="prov-{{ name }}"
+            aria-pressed="false"
+            aria-label="Show password"
+            data-toggle-password
+        >
+            <svg class="icon icon-eye" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg>
+            <svg class="icon icon-eye-off" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg>
+        </button>
+        {% endif %}
+    </div>
+
+    {% if hint %}<p class="field__hint" id="prov-{{ name }}-hint">{{ hint }}</p>{% endif %}
+
+    <p class="field__error" id="prov-{{ name }}-error" role="alert" {% if not err %}hidden{% endif %}>{{ err }}</p>
+</div>
+{% endmacro %}
+
+
+<dialog
+    class="prov-dialog"
+    id="provision-dialog"
+    aria-labelledby="prov-title"
+    aria-describedby="prov-desc"
+    data-provision-dialog
+    {% if provision_open %}data-open-on-load{% endif %}
+>
+
+    <svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="i-badge" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+            <circle cx="9" cy="11" r="2"/>
+            <path d="M6.5 16c.4-1.4 1.4-2 2.5-2s2.1.6 2.5 2M14.5 10h3.5M14.5 13.5H18"/>
+        </symbol>
+        <symbol id="i-mail" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+            <path d="M4 7l8 6 8-6"/>
+        </symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+            <path d="M12 3l7 3v5c0 4.6-3 8.2-7 10-4-1.8-7-5.4-7-10V6l7-3z"/>
+            <path d="M9 12l2.2 2.2L15.5 10"/>
+        </symbol>
+        <symbol id="i-key" viewBox="0 0 24 24">
+            <circle cx="8" cy="15" r="4"/>
+            <path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/>
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+            <path d="M6 6l12 12M18 6L6 18"/>
+        </symbol>
+    </svg>
+
+    <div class="prov-card" data-prov-card>
+
+        <header class="prov-header">
+            <span class="prov-header__badge" aria-hidden="true">
+                <svg class="icon"><use href="#i-shield"></use></svg>
+            </span>
+
+            <div class="prov-header__text">
+                <h2 class="prov-header__title" id="prov-title">Buat akun baru</h2>
+                <p class="prov-header__desc" id="prov-desc">
+                    Akses terbatas untuk operator. Kode akses diperlukan.
+                </p>
+            </div>
+
+            <button class="prov-close" type="button" aria-label="Tutup formulir" data-prov-close>
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg>
+            </button>
+        </header>
+
+        {% if perr['_form'] %}
+        <div class="alert alert--error prov-alert" role="alert">
+            <svg class="icon alert__icon" aria-hidden="true" focusable="false"><use href="#i-alert"></use></svg>
+            <p class="alert__text">{{ perr['_form'] }}</p>
+        </div>
+        {% endif %}
+
+        <form
+            class="form prov-form"
+            method="POST"
+            action="{{ url_for('auth.create_account_route') }}"
+            autocomplete="off"
+            novalidate
+            data-loading-form
+            data-provision-form
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="prov-grid">
+                {{ prov_field('student_code', 'Kode siswa', 'i-badge', perr.student_code, pf.student_code, maxlength=30, placeholder='mis. 2026-0042') }}
+                {{ prov_field('full_name', 'Nama lengkap', 'i-user', perr.full_name, pf.full_name, maxlength=100, placeholder='Nama sesuai data sekolah') }}
+                {{ prov_field('username', 'Username', 'i-user', perr.username, pf.username, maxlength=50, placeholder='huruf kecil, tanpa @', hint='Disimpan dalam huruf kecil.') }}
+                {{ prov_field('email', 'Email', 'i-mail', perr.email, pf.email, type='email', maxlength=100, placeholder='nama@contoh.com') }}
+            </div>
+
+            {{ prov_field('password', 'Kata sandi', 'i-lock', perr.password, type='password', autocomplete='new-password', maxlength=128, placeholder='Minimal 12 karakter', toggle=True) }}
+
+            <ul class="prov-rules" aria-label="Syarat kata sandi" data-prov-rules>
+                <li data-rule="min">Minimal 12 karakter</li>
+                <li data-rule="max">Maksimal 72 byte</li>
+                <li data-rule="user">Tidak memuat username</li>
+            </ul>
+
+            {{ prov_field('confirm_password', 'Ulangi kata sandi', 'i-lock', perr.confirm_password, type='password', autocomplete='new-password', maxlength=128, placeholder='Ketik ulang kata sandi', toggle=True) }}
+
+            <div class="prov-divider" role="separator"><span>Verifikasi operator</span></div>
+
+            {{ prov_field('access_code', 'Kode akses', 'i-key', perr.access_code, type='password', autocomplete='off', maxlength=128, placeholder='Kode dari operator ACTRACE', toggle=True) }}
+
+            <div class="prov-actions">
+                <button class="btn btn--ghost" type="button" data-prov-close>Batal</button>
+
+                <button class="btn btn--primary" type="submit" data-loading-label="Membuat akun…">
+                    <span class="btn__spinner" aria-hidden="true"></span>
+                    <span class="btn__label">Buat akun</span>
+                </button>
+            </div>
+        </form>
+
+    </div>
+</dialog>

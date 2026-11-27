@@ -37,6 +37,13 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/auth.css') }}"
     >
+
+    {% if config.get('ACCOUNT_PROVISIONING_ENABLED') %}
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/provision.css') }}"
+    >
+    {% endif %}
 </head>
 
 <body class="auth-body">
@@ -411,6 +418,11 @@
     </div>
 
 
+    {% if config.get('ACCOUNT_PROVISIONING_ENABLED') %}
+        {% include 'auth/_provision_dialog.html' %}
+    {% endif %}
+
+
     <!-- LOCAL JAVASCRIPT -->
     <script
         src="{{ url_for('static', filename='js/login-animation.js') }}"
@@ -421,6 +433,13 @@
         src="{{ url_for('static', filename='js/main.js') }}"
         defer
     ></script>
+
+    {% if config.get('ACCOUNT_PROVISIONING_ENABLED') %}
+    <script
+        src="{{ url_for('static', filename='js/provision.js') }}"
+        defer
+    ></script>
+    {% endif %}
 
 </body>
 </html>
