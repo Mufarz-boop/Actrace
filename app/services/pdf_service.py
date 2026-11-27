@@ -35,12 +35,6 @@ MUTED = colors.HexColor("#6B7280")
 BORDER = colors.HexColor("#DDE2E8")
 ERROR = colors.HexColor("#9F3434")
 
-# Alias lama dipertahankan agar kompatibel dengan kode lain yang mungkin
-# mengimpor nama warna dari modul ini.
-CYAN = TEAL
-BLUE = NAVY
-PALE = LIGHT
-
 PAGE_WIDTH, PAGE_HEIGHT = A4
 MARGIN_X = 19 * mm
 MARGIN_TOP = 23 * mm
