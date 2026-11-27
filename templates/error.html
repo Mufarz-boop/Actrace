@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -7,7 +6,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="theme-color" content="#142D4E">
 
-    <title>500</title>
+    <title>{{ error_code }}</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
@@ -29,19 +28,18 @@
                 <span>ACTRACE</span>
             </div>
 
-            <div class="error-illustration error-500">
-                <span class="error-icon">!</span>
+            <div class="error-illustration error-{{ error_code }}">
+                <span class="error-icon">{{ error_icon }}</span>
             </div>
 
-            <p class="error-label">INTERNAL SERVER ERROR</p>
+            <p class="error-label">{{ error_label }}</p>
 
-            <h1 class="error-code">500</h1>
+            <h1 class="error-code">{{ error_code }}</h1>
 
-            <h2>Terjadi Kesalahan Server</h2>
+            <h2>{{ error_title }}</h2>
 
             <p class="error-description">
-                Sistem sedang mengalami gangguan internal.
-                Silakan coba kembali beberapa saat lagi.
+                {{ error_message }}
             </p>
 
             <div class="error-actions">
@@ -50,15 +48,23 @@
                     Kembali ke Beranda
                 </a>
 
+                {% if error_action == 'reload' %}
                 <button type="button"
                         class="error-button secondary"
                         data-reload>
                     Coba Lagi
                 </button>
+                {% else %}
+                <button type="button"
+                        class="error-button secondary"
+                        data-go-back>
+                    Halaman Sebelumnya
+                </button>
+                {% endif %}
             </div>
 
             <p class="error-reference">
-                HTTP ERROR 500
+                HTTP ERROR {{ error_code }}
             </p>
 
         </section>

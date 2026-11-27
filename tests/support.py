@@ -171,6 +171,7 @@ _DB_MODULES = (
     "app.services.journal_service",
     "app.services.photo_service",
     "app.services.pdf_service",
+    "app.services.stats_service",
 )
 
 

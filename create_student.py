@@ -1,6 +1,7 @@
 import bcrypt
 
 from app import create_app
+from app.constants import MIN_PASSWORD_LENGTH
 from app.db import get_db_connection
 
 
@@ -38,8 +39,8 @@ def create_student():
         return
 
     # Validate password length
-    if len(password) < 12:
-        print("\n[ERROR] Password minimal 12 karakter.")
+    if len(password) < MIN_PASSWORD_LENGTH:
+        print(f"\n[ERROR] Password minimal {MIN_PASSWORD_LENGTH} karakter.")
         return
 
     # Generate bcrypt hash

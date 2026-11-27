@@ -7,6 +7,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const countLabel = document.getElementById("edit-photo-count");
     const remainingLabel = document.getElementById("edit-photo-remaining");
     const saveButton = document.getElementById("edit-save-button");
+    // Batas dibaca dari atribut data-* form (sumber: app/constants.py).
+    // Validasi di sini hanya kemudahan; backend tetap menjadi penentu.
+    const MAX_PHOTOS = Number(form.dataset.maxPhotos);
+    const MAX_PHOTO_SIZE_MB = Number(form.dataset.maxPhotoSizeMb);
     let selectedFiles = [];
 
     const remainingExisting = () => {
@@ -18,15 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const existing = remainingExisting();
         const total = existing + selectedFiles.length;
         countLabel.textContent = total;
-        remainingLabel.textContent = `Kapasitas tersisa ${Math.max(0, 5-total)} foto`;
-        remainingLabel.classList.toggle("is-limit", total > 5);
+        remainingLabel.textContent = `Kapasitas tersisa ${Math.max(0, MAX_PHOTOS - total)} foto`;
+        remainingLabel.classList.toggle("is-limit", total > MAX_PHOTOS);
     };
 
     document.querySelectorAll("[data-remove-photo]").forEach(input => {
         input.addEventListener("change", () => {
-            if (remainingExisting() + selectedFiles.length > 5) {
+            if (remainingExisting() + selectedFiles.length > MAX_PHOTOS) {
                 input.checked = !input.checked;
-                alert("Jumlah foto tidak boleh melebihi 5.");
+                alert(`Jumlah foto tidak boleh melebihi ${MAX_PHOTOS}.`);
                 return;
             }
             input.closest(".edit-existing-photo").classList.toggle("is-removed", input.checked);
@@ -36,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fileInput.addEventListener("change", () => {
         selectedFiles = [...fileInput.files];
-        if (remainingExisting() + selectedFiles.length > 5) {
+        if (remainingExisting() + selectedFiles.length > MAX_PHOTOS) {
             selectedFiles = [];
             fileInput.value = "";
             previews.replaceChildren();
@@ -73,14 +77,14 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Judul dan deskripsi wajib diisi.");
             return;
         }
-        if (total > 5) {
+        if (total > MAX_PHOTOS) {
             event.preventDefault();
-            alert("Maksimal 5 foto. Kurangi foto baru atau pilih foto lama untuk dihapus.");
+            alert(`Maksimal ${MAX_PHOTOS} foto. Kurangi foto baru atau pilih foto lama untuk dihapus.`);
             return;
         }
-        if (selectedFiles.some(file => file.size > 5 * 1024 * 1024)) {
+        if (selectedFiles.some(file => file.size > MAX_PHOTO_SIZE_MB * 1024 * 1024)) {
             event.preventDefault();
-            alert("Ukuran setiap foto maksimal 5 MB.");
+            alert(`Ukuran setiap foto maksimal ${MAX_PHOTO_SIZE_MB} MB.`);
             return;
         }
 
