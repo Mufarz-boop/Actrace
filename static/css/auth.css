@@ -155,21 +155,6 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Ilustrasi bawaan tetap dipakai, kini sebagai lapisan dekoratif halus di belakang teks */
-.brand__visual {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  width: 75%;
-  max-width: 26rem;
-  height: clamp(13rem, 40vh, 22rem);
-  object-fit: contain;
-  object-position: right bottom;
-  opacity: 0.45;
-  pointer-events: none;
-}
-
 /* ---------- Authentication section: panel putih ---------- */
 .auth {
   display: flex;
@@ -442,7 +427,7 @@
 
 /* ==========================================================================
    Tablet: 768px - 1023px
-   Kolom brand menyempit; ilustrasi mengecil mengikuti lebar kolom.
+   Kolom brand menyempit.
    ========================================================================== */
 @media (max-width: 1023px) {
   .auth-layout {
@@ -460,10 +445,6 @@
 
   .brand__intro {
     font-size: 0.9375rem;
-  }
-
-  .brand__visual {
-    height: clamp(11rem, 30vh, 17rem);
   }
 }
 
@@ -517,8 +498,7 @@
     letter-spacing: -0.01em;
   }
 
-  .brand__intro,
-  .brand__visual {
+  .brand__intro {
     display: none;
   }
 
