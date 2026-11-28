@@ -193,28 +193,19 @@
                     </a>
 
 
+                    {# My Journals aktif di daftar, tambah, detail, dan edit jurnal #}
+                    {% set journals_nav_active = request.endpoint in ['student.journals', 'student.add_journal', 'student.detail_journal', 'student.edit_journal'] %}
+
                     <a
                         href="{{ url_for('student.journals') }}"
-                        class="nav-link {% if request.endpoint == 'student.journals' %}nav-link--active{% endif %}"
-                        {% if request.endpoint == 'student.journals' %}aria-current="page"{% endif %}
+                        class="nav-link {% if journals_nav_active %}nav-link--active{% endif %}"
+                        {% if journals_nav_active %}aria-current="page"{% endif %}
                     >
                         <svg class="icon" aria-hidden="true">
                             <use href="#icon-journal"></use>
                         </svg>
 
                         <span>My Journals</span>
-                    </a>
-
-                    <a
-                        href="{{ url_for('student.history') }}"
-                        class="nav-link {% if request.endpoint == 'student.history' %}nav-link--active{% endif %}"
-                        {% if request.endpoint == 'student.history' %}aria-current="page"{% endif %}
-                    >
-                        <svg class="icon" aria-hidden="true">
-                            <use href="#icon-calendar"></use>
-                        </svg>
-
-                        <span>Journal History</span>
                     </a>
 
                     <a
