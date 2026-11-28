@@ -1197,14 +1197,55 @@ def dashboard():
         latest_activity=latest
     )
 
+# Parameter daftar jurnal yang boleh dibawa saat berpindah halaman
+# (redirect /history lama dan redirect setelah hapus jurnal). Hanya nilai
+# yang lolos validasi yang diteruskan, sehingga parameter lain tidak ikut
+# masuk ke url_for().
+
+def _journal_list_params(source):
+
+    params = {}
+
+    keyword = (source.get("q") or "").strip()[:100]
+
+    if keyword:
+        params["q"] = keyword
+
+    for name in ("start_date", "end_date"):
+
+        value = (source.get(name) or "").strip()
+
+        if not value:
+            continue
+
+        try:
+            params[name] = date.fromisoformat(value).isoformat()
+        except ValueError:
+            continue
+
+    try:
+        page = int(source.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    if page > 1:
+        params["page"] = page
+
+    return params
+
+
 # =====================================================
-# JOURNAL HISTORY
+# MY JOURNALS
 # =====================================================
 
-@student_bp.get("/history")
+@student_bp.get("/journals")
 @student_required
-def history():
-    """Menampilkan riwayat jurnal milik siswa."""
+def journals():
+    """
+    Halaman utama My Journals: daftar jurnal milik siswa yang sedang login
+    dengan pencarian, filter tanggal, pagination, jumlah foto, serta aksi
+    detail, edit, dan hapus.
+    """
 
     keyword = request.args.get("q", "").strip()[:100]
     start_value = request.args.get("start_date", "").strip()
@@ -1253,7 +1294,7 @@ def history():
     total_pages = 1
 
     # -------------------------------------------------
-    # QUERY JOURNAL HISTORY
+    # QUERY JOURNALS
     # -------------------------------------------------
 
     if error is None:
@@ -1353,7 +1394,7 @@ def history():
     # -------------------------------------------------
 
     return render_template(
-        "student/history.html",
+        "student/journals.html",
 
         journals=journals,
 
@@ -1371,41 +1412,24 @@ def history():
         error=error
     )
 
-# =====================================================
-# MY JOURNALS
-# =====================================================
 
-@student_bp.get("/journals")
+# =====================================================
+# JOURNAL HISTORY (URL LAMA)
+# =====================================================
+# Halaman Journal History sudah digabung ke My Journals. URL lama
+# dipertahankan agar bookmark tetap berfungsi. Gerbang login sama seperti
+# sebelumnya: tamu tetap diarahkan ke halaman login.
+
+@student_bp.get("/history")
 @student_required
-def journals():
+def legacy_history_redirect():
 
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
-
-    try:
-        cur.execute(
-            """
-            SELECT
-                journal_id,
-                activity_date,
-                title,
-                description
-            FROM journals
-            WHERE user_id = %s
-            ORDER BY activity_date DESC, journal_id DESC
-            """,
-            (session["user_id"],)
-        )
-
-        rows = cur.fetchall()
-
-    finally:
-        cur.close()
-        conn.close()
-
-    return render_template(
-        "student/journals.html",
-        journals=rows
+    return redirect(
+        url_for(
+            "student.journals",
+            **_journal_list_params(request.args),
+        ),
+        code=301,
     )
 
 
@@ -1900,9 +1924,15 @@ def delete_journal_route(journal_id):
         # =================================================
         # 4. REDIRECT
         # =================================================
+        # Kembali ke My Journals dengan pencarian, filter, dan halaman
+        # yang sedang dibuka. Halaman otomatis disesuaikan oleh
+        # journals() bila halaman tersebut sudah tidak ada.
 
         return redirect(
-            url_for("student.journals")
+            url_for(
+                "student.journals",
+                **_journal_list_params(request.form),
+            )
         )
 
     except JournalDeleteError:
@@ -1920,6 +1950,17 @@ def delete_journal_route(journal_id):
             "Tidak ada perubahan yang berhasil disimpan.",
             "error",
         )
+
+        # Penghapusan dari daftar kembali ke daftar yang sama;
+        # dari halaman detail kembali ke halaman detail.
+
+        if request.form.get("origin") == "list":
+            return redirect(
+                url_for(
+                    "student.journals",
+                    **_journal_list_params(request.form),
+                )
+            )
 
         return redirect(
             url_for(
