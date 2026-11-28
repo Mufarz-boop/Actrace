@@ -23,7 +23,7 @@
     <!-- PROFILE OVERVIEW -->
     <section class="profile-summary">
 
-        <div class="profile-summary__avatar">
+        <div class="profile-summary__avatar" data-summary-avatar>
 
             {% if user.photo %}
                 <img
@@ -31,16 +31,16 @@
                     alt="Foto profil {{ user.full_name }}"
                 >
             {% else %}
-                <span>{{ user.full_name[0]|upper }}</span>
+                <span data-live-initial>{{ user.full_name[0]|upper }}</span>
             {% endif %}
 
         </div>
 
         <div class="profile-summary__info">
 
-            <h2>{{ user.full_name }}</h2>
+            <h2 data-live="full_name">{{ user.full_name }}</h2>
 
-            <p>@{{ user.username }}</p>
+            <p>@<span data-live="username">{{ user.username }}</span></p>
 
             <div class="profile-summary__meta">
 
@@ -137,12 +137,27 @@
     </section>
 
 
+    {% if draft_restored %}
+    <div class="profile-restored" role="status">
+        <span>
+            Isian terakhirmu dipulihkan karena penyimpanan belum berhasil.
+            Periksa pesan di atas, perbaiki, lalu simpan ulang. Foto baru
+            perlu dipilih lagi.
+        </span>
+    </div>
+    {% endif %}
+
+
     <!-- PROFILE FORM -->
     <form
         method="POST"
         action="{{ url_for('student.profile') }}"
         enctype="multipart/form-data"
         class="profile-form"
+        id="profile-form"
+        data-loading-form
+        data-max-photo-bytes="{{ max_profile_photo_bytes }}"
+        {% if draft_restored %}data-restored="true"{% endif %}
     >
 
         <input
@@ -173,9 +188,9 @@
 
 
             <!-- PROFILE PHOTO -->
-            <div class="profile-photo-field">
+            <div class="profile-photo-field" data-photo-field>
 
-                <div class="profile-photo-field__preview">
+                <div class="profile-photo-field__preview" data-photo-preview>
 
                     {% if user.photo %}
                         <img
@@ -195,7 +210,7 @@
                         Profile Photo
                     </label>
 
-                    <p>
+                    <p id="profile-photo-hint">
                         JPEG, PNG, atau WebP. Maksimal 2 MB.
                     </p>
 
@@ -203,8 +218,26 @@
                         type="file"
                         name="photo"
                         id="profile-photo"
+                        class="profile-file"
                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        aria-describedby="profile-photo-hint profile-photo-status"
                     >
+
+                    <label for="profile-photo" class="profile-file-button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 16V4M7 9l5-5 5 5"/>
+                            <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+                        </svg>
+                        Choose photo
+                    </label>
+
+                    <p
+                        class="profile-photo-field__status"
+                        id="profile-photo-status"
+                        data-photo-status
+                        role="status"
+                        aria-live="polite"
+                    ></p>
 
                     {% if user.photo %}
                         <label class="profile-remove-photo">
@@ -213,6 +246,7 @@
                                 type="checkbox"
                                 name="remove_photo"
                                 value="1"
+                                data-remove-photo
                             >
 
                             Remove current photo
@@ -552,7 +586,15 @@
                         id="internship-end-date"
                         name="internship_end_date"
                         value="{{ user.internship_end_date.strftime('%Y-%m-%d') if user.internship_end_date else '' }}"
+                        aria-describedby="internship-date-error"
                     >
+
+                    <small
+                        class="profile-form__error"
+                        id="internship-date-error"
+                        data-date-error
+                        role="alert"
+                    ></small>
 
                 </div>
 
@@ -614,6 +656,13 @@
         <!-- FORM ACTIONS -->
         <div class="profile-form__actions">
 
+            <span
+                class="profile-form__dirty"
+                data-dirty-note
+                role="status"
+                aria-live="polite"
+            >Belum ada perubahan</span>
+
             <a
                 href="{{ url_for('student.dashboard') }}"
                 class="profile-button profile-button--secondary"
@@ -624,14 +673,58 @@
             <button
                 type="submit"
                 class="profile-button profile-button--primary"
+                data-loading-label="Save Profile"
             >
-                Save Profile
+                <span class="btn__label">Save Profile</span>
             </button>
 
         </div>
 
     </form>
 
+
+    <!-- KONFIRMASI KELUAR (hanya muncul bila ada perubahan belum disimpan) -->
+    <dialog
+        class="profile-dialog"
+        id="profile-leave-dialog"
+        aria-labelledby="profile-leave-title"
+    >
+        <div class="profile-dialog__body">
+            <h2 id="profile-leave-title">Buang perubahan?</h2>
+            <p>
+                Ada perubahan profil yang belum disimpan. Jika kamu pindah
+                halaman sekarang, perubahan itu akan hilang.
+            </p>
+        </div>
+
+        <div class="profile-dialog__actions">
+            <button
+                type="button"
+                class="profile-button profile-button--secondary"
+                data-leave-stay
+                autofocus
+            >
+                Tetap di halaman
+            </button>
+
+            <button
+                type="button"
+                class="profile-button profile-button--danger"
+                data-leave-confirm
+            >
+                Buang perubahan
+            </button>
+        </div>
+    </dialog>
+
 </section>
 
+{% endblock %}
+
+
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='js/profile.js') }}"
+    defer
+></script>
 {% endblock %}

@@ -1,5 +1,6 @@
 import bcrypt
 import io
+import json
 import uuid
 from datetime import date
 from pathlib import Path
@@ -231,7 +232,7 @@ def _save_profile_photo(upload):
         if file_size <= 0:
             raise ValueError("File foto kosong.")
 
-        if file_size > 2 * 1024 * 1024:
+        if file_size > PROFILE_PHOTO_MAX_BYTES:
             raise ValueError(
                 "Ukuran foto profil maksimal 2 MB."
             )
@@ -305,6 +306,78 @@ def _save_profile_photo(upload):
 # STUDENT PROFILE
 # =====================================================
 
+PROFILE_PHOTO_MAX_BYTES = 2 * 1024 * 1024
+
+# Kolom teks yang dipulihkan bila penyimpanan profil gagal. Batas panjang
+# per kolom menjaga cookie sesi tetap kecil (cookie browser maks. ~4 KB).
+_PROFILE_DRAFT_FIELDS = {
+    "full_name": 100,
+    "username": 50,
+    "email": 100,
+    "school_name": 150,
+    "class_name": 50,
+    "major": 100,
+    "academic_year": 20,
+    "internship_company": 150,
+    "internship_industry": 100,
+    "internship_address": 255,
+    "supervisor_name": 100,
+    "supervisor_position": 100,
+    "internship_start_date": 10,
+    "internship_end_date": 10,
+}
+
+_PROFILE_DRAFT_MAX_JSON = 1800
+
+
+def _remember_profile_draft():
+    """
+    Simpan isian formulir ke sesi agar tidak hilang saat validasi gagal.
+    Foto tidak disimpan (file tidak bisa dipulihkan). Bila terlalu besar
+    untuk cookie sesi, draf dilewati dan perilaku kembali seperti semula.
+    """
+
+    draft = {}
+
+    for field, maximum in _PROFILE_DRAFT_FIELDS.items():
+        value = request.form.get(field, "").strip()
+        draft[field] = value[:maximum]
+
+    if len(json.dumps(draft)) > _PROFILE_DRAFT_MAX_JSON:
+        session.pop("profile_draft", None)
+        return
+
+    session["profile_draft"] = draft
+
+
+def _profile_error(message):
+    """Tampilkan pesan galat, simpan isian, lalu kembali ke formulir."""
+
+    flash(message, "error")
+    _remember_profile_draft()
+
+    return redirect(url_for("student.profile"))
+
+
+def _apply_profile_draft(user, draft):
+    """Timpa data tampilan dengan isian yang belum berhasil disimpan."""
+
+    for field in _PROFILE_DRAFT_FIELDS:
+
+        if field not in draft:
+            continue
+
+        value = draft[field]
+
+        if field in ("internship_start_date", "internship_end_date"):
+            try:
+                user[field] = date.fromisoformat(value) if value else None
+            except ValueError:
+                user[field] = None
+        else:
+            user[field] = value
+
+
 @student_bp.route("/profile", methods=["GET", "POST"])
 @student_required
 def profile():
@@ -370,26 +443,20 @@ def profile():
         # ---------------------------------------------
 
         if not full_name or len(full_name) > 100:
-            flash(
+            return _profile_error(
                 "Nama lengkap wajib diisi dan maksimal 100 karakter.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         if not 3 <= len(username) <= 50:
-            flash(
+            return _profile_error(
                 "Username harus terdiri dari 3–50 karakter.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         if not username.replace("_", "").replace("-", "").replace(".", "").isalnum():
-            flash(
+            return _profile_error(
                 "Username hanya boleh berisi huruf, angka, titik, "
                 "garis bawah, dan tanda hubung.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         if (
             not email
@@ -399,11 +466,9 @@ def profile():
             or email.endswith("@")
             or any(char.isspace() for char in email)
         ):
-            flash(
+            return _profile_error(
                 "Alamat email tidak valid.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         # ---------------------------------------------
         # VALIDATE ACADEMIC AND INTERNSHIP FIELDS
@@ -424,11 +489,9 @@ def profile():
         for label, (value, maximum) in profile_fields.items():
 
             if len(value) > maximum:
-                flash(
+                return _profile_error(
                     f"{label} maksimal {maximum} karakter.",
-                    "error",
                 )
-                return redirect(url_for("student.profile"))
 
         # ---------------------------------------------
         # VALIDATE INTERNSHIP DATES
@@ -446,22 +509,18 @@ def profile():
                 internship_end_date = date.fromisoformat(end_value)
 
         except ValueError:
-            flash(
+            return _profile_error(
                 "Format tanggal PKL tidak valid.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         if (
             internship_start_date
             and internship_end_date
             and internship_start_date > internship_end_date
         ):
-            flash(
+            return _profile_error(
                 "Tanggal mulai PKL tidak boleh melewati tanggal selesai.",
-                "error",
             )
-            return redirect(url_for("student.profile"))
 
         # ---------------------------------------------
         # SAVE PROFILE PHOTO
@@ -478,8 +537,9 @@ def profile():
                 )
 
             except ValueError as exc:
-                flash(str(exc), "error")
-                return redirect(url_for("student.profile"))
+                return _profile_error(
+                    str(exc),
+                )
 
         # ---------------------------------------------
         # DATABASE TRANSACTION
@@ -665,6 +725,9 @@ def profile():
             if new_photo_path and new_photo_path.exists():
                 new_photo_path.unlink(missing_ok=True)
 
+            # Pesan galat sudah di-flash di atas; simpan isian agar tidak hilang.
+            _remember_profile_draft()
+
             return redirect(url_for("student.profile"))
 
         # ---------------------------------------------
@@ -688,6 +751,7 @@ def profile():
         # ---------------------------------------------
 
         session["full_name"] = full_name
+        session.pop("profile_draft", None)
 
         flash(
             "Profil berhasil diperbarui.",
@@ -829,6 +893,18 @@ def profile():
         }
 
     # ---------------------------------------------
+    # RESTORE UNSAVED FORM INPUT
+    # ---------------------------------------------
+    # Dipakai setelah penyimpanan gagal agar siswa tidak mengetik ulang.
+    # Status PKL di atas sengaja dihitung dari data tersimpan, bukan draf.
+
+    draft = session.pop("profile_draft", None)
+    draft_restored = isinstance(draft, dict)
+
+    if draft_restored:
+        _apply_profile_draft(user, draft)
+
+    # ---------------------------------------------
     # RENDER PROFILE
     # ---------------------------------------------
 
@@ -837,6 +913,8 @@ def profile():
         user=user,
         activity_stats=activity_stats,
         internship_status=internship_status,
+        draft_restored=draft_restored,
+        max_profile_photo_bytes=PROFILE_PHOTO_MAX_BYTES,
     )
 
 

@@ -1006,3 +1006,110 @@ html.rp-pre:not(.rp-play) .report-page::before{opacity:1}
 .report-metric:hover,.report-metric:hover span i,.report-export:hover .report-export__icon,.report-journal__summary-meta>a:hover i,.report-page .journals-back-link:hover .icon,.report-page .journals-back-link:hover i,.report-filter:focus-within .report-filter__icon,.report-page .add-journal-button:active{transform:none}
 .report-page .add-journal-button.is-loading::before{animation-duration:1.4s}
 }
+/* ==========================================================================
+   Perpindahan menu yang mulus (nav-indicator.js + View Transitions)
+   ========================================================================== */
+
+/* Tahap 1: umpan balik instan saat link diklik (sebelum halaman berganti). */
+.sidebar.has-nav-indicator .nav-link.is-pending{color:#fff}
+.sidebar.has-nav-indicator .nav-link.is-pending .icon{color:#7DD3C7}
+.sidebar.has-nav-indicator .nav-link--active.is-deactivating{color:rgba(255,255,255,.72)}
+.sidebar.has-nav-indicator .nav-link--active.is-deactivating .icon{color:inherit}
+
+/* Tahap 2: sidebar dan topbar tetap diam; hanya konten yang berganti.
+   Peramban tanpa cross-document View Transitions memakai html.no-vt. */
+@view-transition{navigation:auto}
+.sidebar{view-transition-name:sidebar}
+.topbar{view-transition-name:topbar}
+::view-transition{background:var(--color-bg,#F4F7FA)}
+::view-transition-group(sidebar),::view-transition-group(topbar){animation:none}
+::view-transition-old(sidebar),::view-transition-old(topbar){display:none}
+::view-transition-new(sidebar),::view-transition-new(topbar){animation:none}
+::view-transition-old(root){animation:actrace-vt-out 110ms ease-in both}
+::view-transition-new(root){animation:actrace-vt-in 280ms var(--motion-ease) 60ms both}
+html.js-reveal::view-transition-new(root){animation:none}
+@keyframes actrace-vt-out{to{opacity:0}}
+@keyframes actrace-vt-in{from{opacity:0;transform:translate3d(0,10px,0)}}
+@keyframes actrace-page-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
+html.no-vt:not(.no-page-motion) .page-content{animation:actrace-page-in 260ms var(--motion-ease) both}
+@media (prefers-reduced-motion:reduce){
+@view-transition{navigation:none}
+html.no-vt .page-content{animation:none}
+}
+
+/* ==========================================================================
+   My Profile v2
+   ========================================================================== */
+
+/* Halaman ini memakai token yang belum pernah didefinisikan (--primary-color,
+   --text-primary, dst.) sehingga jatuh ke biru bawaan. Petakan ke palet
+   resmi ACTRACE, hanya di dalam .profile-page. */
+.profile-page{--primary-color:var(--color-teal);--text-primary:var(--color-navy);--text-secondary:var(--color-text-muted);--card-bg:var(--color-surface);--border-color:var(--color-border);--surface-bg:#EEF4F6;--input-bg:#fff}
+.profile-summary,.profile-card,.profile-activity__card{box-shadow:var(--shadow-card)}
+.profile-summary__avatar{background:var(--color-navy);box-shadow:0 0 0 4px #fff,0 0 0 5px var(--color-border)}
+.profile-photo-field__preview{background:var(--color-navy);box-shadow:0 0 0 3px #fff,0 0 0 4px var(--color-border)}
+.profile-summary__avatar.is-swapped,.profile-photo-field__preview.is-swapped{animation:profile-pop 320ms var(--motion-ease)}
+@keyframes profile-pop{from{opacity:.4;transform:scale(.92)}to{opacity:1;transform:none}}
+.profile-summary__badge{color:var(--color-teal-dark);background:#E6F2F3}
+
+/* Kolom isian */
+.profile-form__group input{border-color:var(--color-border-input);transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+.profile-form__group input:hover:not(:disabled){border-color:#94A3B8}
+.profile-form__group input:focus,.profile-form__group input:focus-visible{border-color:var(--color-teal);box-shadow:var(--focus-ring)}
+.profile-form__group input:user-invalid,.profile-form__group input.is-invalid{border-color:var(--color-danger);background:var(--color-danger-bg)}
+.profile-form__group input:user-invalid:focus,.profile-form__group input.is-invalid:focus{box-shadow:0 0 0 3px rgba(155,44,44,.16)}
+.profile-form__error{display:none;color:var(--color-danger);font-size:11px;font-weight:600}
+.profile-form__error.is-visible{display:block}
+
+/* Unggah foto */
+.profile-photo-field__content{min-width:0}
+.profile-file{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.profile-file-button{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;color:var(--color-navy);background:#fff;border:1px solid var(--color-border-input);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
+.profile-file-button:hover{background:#F8FAFC;border-color:var(--color-teal)}
+.profile-file:focus-visible+.profile-file-button{border-color:var(--color-teal);box-shadow:var(--focus-ring)}
+.profile-file-button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-photo-field__status{min-height:16px;margin:0;color:var(--color-text-muted);font-size:11px}
+.profile-photo-field__status.is-error{color:var(--color-danger);font-weight:600}
+.profile-photo-field__status.is-ok{color:var(--color-success);font-weight:600}
+.profile-photo-field.is-removing .profile-photo-field__preview{opacity:.35;filter:grayscale(1)}
+.profile-remove-photo input{accent-color:var(--color-teal)}
+
+/* Catatan draf yang dipulihkan */
+.profile-restored{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;color:#7A4E0B;background:#FDF6E8;border:1px solid #F3DDB0;border-radius:10px;font-size:12px;line-height:1.6}
+
+/* Bilah aksi: menempel di bawah layar agar tombol simpan selalu terjangkau */
+.profile-form__actions{position:sticky;bottom:14px;z-index:20;align-items:center;margin-top:8px;padding:12px 14px;background:rgba(255,255,255,.92);border:1px solid var(--color-border);border-radius:12px;box-shadow:0 8px 28px rgba(20,45,78,.12);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.profile-form__dirty{display:inline-flex;align-items:center;gap:8px;margin-right:auto;color:var(--color-text-muted);font-size:12px;font-weight:600}
+.profile-form__dirty::before{content:"";width:8px;height:8px;background:#CBD5E1;border-radius:50%;transition:background-color .2s ease,transform .2s ease}
+.profile-form.is-dirty .profile-form__dirty{color:#8A5A0B}
+.profile-form.is-dirty .profile-form__dirty::before{background:var(--color-amber);transform:scale(1.15)}
+.profile-button--primary{background:var(--color-teal)}
+.profile-button--primary:hover{background:var(--color-teal-dark);filter:none}
+.profile-button:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.profile-form.is-clean .profile-button--primary{opacity:.5;cursor:default}
+.profile-button--primary.is-loading{position:relative;color:transparent;pointer-events:none}
+.profile-button--primary.is-loading .btn__label{visibility:hidden}
+.profile-button--primary.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:logout-transition-spin 700ms linear infinite}
+
+/* Dialog konfirmasi keluar */
+.profile-dialog{width:min(420px,calc(100vw - 32px));padding:0;color:var(--color-text);background:#fff;border:1px solid var(--color-border);border-radius:14px;box-shadow:0 24px 60px rgba(20,45,78,.28)}
+.profile-dialog::backdrop{background:rgba(14,34,64,.45)}
+.profile-dialog[open]{animation:profile-pop 220ms var(--motion-ease)}
+.profile-dialog__body{padding:24px 24px 8px}
+.profile-dialog__body h2{margin:0 0 8px;color:var(--color-navy);font-size:17px;font-weight:750}
+.profile-dialog__body p{margin:0;color:var(--color-text-muted);font-size:13px;line-height:1.7}
+.profile-dialog__actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 22px}
+.profile-button--danger{color:#fff;background:var(--color-danger)}
+.profile-button--danger:hover{background:#7F2323}
+
+@media (max-width:600px){
+.profile-form__actions{bottom:8px;flex-wrap:wrap}
+.profile-form__dirty{width:100%;margin-right:0}
+.profile-dialog__actions{flex-direction:column-reverse}
+.profile-dialog__actions .profile-button{width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+.profile-summary__avatar.is-swapped,.profile-photo-field__preview.is-swapped,.profile-dialog[open]{animation:none}
+.profile-form__group input,.profile-file-button,.profile-form__dirty::before{transition:none}
+.profile-button--primary.is-loading::after{animation-duration:1.6s}
+}
