@@ -19,6 +19,8 @@ from reportlab.platypus import (
     PageBreak, Image, KeepTogether, HRFlowable, Flowable, CondPageBreak,
 )
 
+from app.services.stats_service import summarize_journal_period
+
 logger = logging.getLogger(__name__)
 
 
@@ -862,16 +864,9 @@ def _cover_story(student, start_date, end_date, generated_at, styles):
 
 
 def _summary_story(journals, start_date, end_date, styles):
-    unique_days = {
-        str(j.get("activity_date"))[:10]
-        for j in journals
-        if j.get("activity_date") is not None
-    }
-
-    total_photos = sum(len(j.get("photos") or []) for j in journals)
-
-    if not total_photos:
-        total_photos = sum(_safe_int(j.get("photo_count")) for j in journals)
+    period_stats = summarize_journal_period(journals)
+    total_days = period_stats["total_activity_days"]
+    total_photos = period_stats["total_photos"]
 
     parsed_dates = [
         parsed for parsed in (_to_date(j.get("activity_date")) for j in journals)
@@ -891,8 +886,8 @@ def _summary_story(journals, start_date, end_date, styles):
         Spacer(1, 6 * mm),
         _stat_cards(
             [
-                ("TOTAL JURNAL", str(len(journals))),
-                ("HARI KEGIATAN", str(len(unique_days))),
+                ("TOTAL JURNAL", str(period_stats["total_journals"])),
+                ("HARI KEGIATAN", str(total_days)),
                 ("DOKUMENTASI FOTO", str(total_photos)),
             ],
             styles,
@@ -902,7 +897,7 @@ def _summary_story(journals, start_date, end_date, styles):
         Spacer(1, 12 * mm),
     ])
 
-    return story, len(unique_days), total_photos
+    return story, total_days, total_photos
 
 
 def _closing_story(journal_count, day_count, total_photos,

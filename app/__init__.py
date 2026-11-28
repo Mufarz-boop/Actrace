@@ -12,6 +12,8 @@ from flask import (
 )
 
 from flask_wtf.csrf import CSRFProtect
+
+from app import constants
 from config import Config
 
 
@@ -20,6 +22,63 @@ from config import Config
 # ==========================================
 
 csrf = CSRFProtect()
+
+
+# ==========================================
+# ERROR PAGES
+# ==========================================
+# Isi tiap halaman error. Semuanya dirender oleh templates/error.html.
+# Hanya teks statis di sini; detail exception tidak pernah dikirim ke
+# template. "action" menentukan tombol sekunder: "back" (halaman
+# sebelumnya) atau "reload" (coba lagi).
+
+ERROR_PAGES = {
+    403: {
+        "label": "ACCESS FORBIDDEN",
+        "title": "Akses Ditolak",
+        "message": (
+            "Maaf, kamu tidak memiliki izin untuk mengakses "
+            "halaman atau sumber daya ini."
+        ),
+        "icon": "!",
+        "action": "back",
+    },
+    404: {
+        "label": "PAGE NOT FOUND",
+        "title": "Halaman Tidak Ditemukan",
+        "message": (
+            "Halaman yang kamu cari mungkin telah dipindahkan, "
+            "dihapus, atau alamat yang dimasukkan tidak benar."
+        ),
+        "icon": "?",
+        "action": "back",
+    },
+    500: {
+        "label": "INTERNAL SERVER ERROR",
+        "title": "Terjadi Kesalahan Server",
+        "message": (
+            "Sistem sedang mengalami gangguan internal. "
+            "Silakan coba kembali beberapa saat lagi."
+        ),
+        "icon": "!",
+        "action": "reload",
+    },
+}
+
+
+def render_error_page(status_code):
+
+    page = ERROR_PAGES[status_code]
+
+    return render_template(
+        "error.html",
+        error_code=status_code,
+        error_label=page["label"],
+        error_title=page["title"],
+        error_message=page["message"],
+        error_icon=page["icon"],
+        error_action=page["action"],
+    ), status_code
 
 
 # ==========================================
@@ -86,6 +145,26 @@ def create_app():
 
 
     # ======================================
+    # TEMPLATE CONTEXT: APPLICATION LIMITS
+    # ======================================
+    # Nilai batas berasal dari app/constants.py. Template memakainya untuk
+    # teks/atribut HTML dan meneruskannya ke JavaScript lewat atribut data-*.
+
+    @app.context_processor
+    def inject_app_limits():
+
+        return {
+            "app_limits": {
+                "max_photos_per_journal": constants.MAX_PHOTOS_PER_JOURNAL,
+                "max_photo_size_mb": constants.MAX_PHOTO_SIZE_MB,
+                "max_journal_title_length": constants.MAX_JOURNAL_TITLE_LENGTH,
+                "min_password_length": constants.MIN_PASSWORD_LENGTH,
+                "bcrypt_max_password_bytes": constants.BCRYPT_MAX_PASSWORD_BYTES,
+            }
+        }
+
+
+    # ======================================
     # MAIN ROUTE
     # ======================================
 
@@ -105,17 +184,13 @@ def create_app():
     @app.errorhandler(403)
     def forbidden(error):
 
-        return render_template(
-            "errors/403.html"
-        ), 403
+        return render_error_page(403)
 
 
     @app.errorhandler(404)
     def not_found(error):
 
-        return render_template(
-            "errors/404.html"
-        ), 404
+        return render_error_page(404)
 
 
     @app.errorhandler(500)
@@ -128,9 +203,7 @@ def create_app():
             exc_info=True
         )
 
-        return render_template(
-            "errors/500.html"
-        ), 500
+        return render_error_page(500)
 
 
     # ======================================

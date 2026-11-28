@@ -193,7 +193,7 @@
                     <span class="photo-count">
                         <i class="fas fa-images"></i>
 
-                        {{ journal.photos|length }} / 5 Photos
+                        {{ journal.photos|length }} / {{ app_limits.max_photos_per_journal }} Photos
                     </span>
 
                 </div>

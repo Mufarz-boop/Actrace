@@ -489,8 +489,12 @@ class ApiTests(unittest.TestCase):
                     "student_code": "S-0007",
                     "full_name": "Siswa Uji",
                 },
-                {"total": 3},
-                {"activity_date": support.today(), "title": "Judul"},
+                {
+                    "total_journals": 3,
+                    "total_photos": 2,
+                    "latest_activity": support.today(),
+                    "latest_title": "Judul",
+                },
             ]
         )
         conn = FakeConnection(cursor)

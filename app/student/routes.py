@@ -20,6 +20,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 from mysql.connector import IntegrityError
 
+from app.constants import BCRYPT_MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH
 from app.student import student_bp
 from app.utils.decorators import student_required
 from app.db import get_db_connection
@@ -38,6 +39,10 @@ from app.services.journal_service import (
 
 from app.services.photo_service import PhotoValidationError
 from app.services.pdf_service import build_journal_report_pdf
+from app.services.stats_service import (
+    get_student_stats,
+    summarize_journal_period,
+)
 
 
 def _parse_report_period(start_value, end_value):
@@ -109,14 +114,16 @@ def reports():
         )
         error = "Rekap jurnal gagal dimuat. Silakan coba kembali."
 
+    period_stats = summarize_journal_period(journals)
+
     return render_template(
         "student/reports.html",
         start_date=start_value,
         end_date=end_value,
         journals=journals,
-        total_journals=len(journals),
-        total_photos=sum(int(journal.get("photo_count") or 0) for journal in journals),
-        total_activity_days=len({str(journal.get("activity_date"))[:10] for journal in journals if journal.get("activity_date") is not None}),
+        total_journals=period_stats["total_journals"],
+        total_photos=period_stats["total_photos"],
+        total_activity_days=period_stats["total_activity_days"],
         error=error,
         today=today.isoformat(),
     )
@@ -749,24 +756,7 @@ def profile():
         # JOURNAL STATISTICS
         # ---------------------------------------------
 
-        cursor.execute(
-            """
-            SELECT
-                COUNT(DISTINCT j.journal_id) AS total_journals,
-                COUNT(DISTINCT jp.photo_id) AS total_photos,
-                MAX(j.activity_date) AS latest_activity
-
-            FROM journals AS j
-
-            LEFT JOIN journal_photos AS jp
-                ON jp.journal_id = j.journal_id
-
-            WHERE j.user_id = %s
-            """,
-            (user_id,),
-        )
-
-        activity_stats = cursor.fetchone() or {}
+        activity_stats = get_student_stats(user_id, cursor=cursor)
 
     except Exception:
 
@@ -958,18 +948,18 @@ def settings():
             )
             return redirect(url_for("student.settings"))
 
-        if len(new_password) < 12:
+        if len(new_password) < MIN_PASSWORD_LENGTH:
             flash(
-                "Kata sandi baru minimal harus terdiri dari 12 karakter.",
+                f"Kata sandi baru minimal harus terdiri dari {MIN_PASSWORD_LENGTH} karakter.",
                 "error",
             )
             return redirect(url_for("student.settings"))
 
         # bcrypt hanya memproses maksimal 72 byte.
-        if len(new_password.encode("utf-8")) > 72:
+        if len(new_password.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
             flash(
                 "Kata sandi baru terlalu panjang. "
-                "Maksimal 72 byte dalam UTF-8.",
+                f"Maksimal {BCRYPT_MAX_PASSWORD_BYTES} byte dalam UTF-8.",
                 "error",
             )
             return redirect(url_for("student.settings"))
@@ -1159,41 +1149,19 @@ def settings():
 @student_required
 def dashboard():
 
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+    stats = get_student_stats(session["user_id"])
 
-    try:
-        cur.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM journals
-            WHERE user_id = %s
-            """,
-            (session["user_id"],)
-        )
+    latest = None
 
-        total = cur.fetchone()["total"]
-
-        cur.execute(
-            """
-            SELECT activity_date, title
-            FROM journals
-            WHERE user_id = %s
-            ORDER BY activity_date DESC, journal_id DESC
-            LIMIT 1
-            """,
-            (session["user_id"],)
-        )
-
-        latest = cur.fetchone()
-
-    finally:
-        cur.close()
-        conn.close()
+    if stats["latest_activity"] is not None:
+        latest = {
+            "activity_date": stats["latest_activity"],
+            "title": stats["latest_title"],
+        }
 
     return render_template(
         "student/dashboard.html",
-        total_journals=total,
+        total_journals=stats["total_journals"],
         latest_activity=latest
     )
 

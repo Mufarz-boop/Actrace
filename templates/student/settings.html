@@ -142,8 +142,8 @@
                         id="new-password"
                         name="new_password"
                         placeholder="Create a new password"
-                        minlength="12"
-                        maxlength="72"
+                        minlength="{{ app_limits.min_password_length }}"
+                        maxlength="{{ app_limits.bcrypt_max_password_bytes }}"
                         autocomplete="new-password"
                         required
                     >
@@ -182,7 +182,7 @@
                 </div>
 
                 <small>
-                    Minimal 12 karakter dan maksimal 72 byte dalam UTF-8.
+                    Minimal {{ app_limits.min_password_length }} karakter dan maksimal {{ app_limits.bcrypt_max_password_bytes }} byte dalam UTF-8.
                 </small>
 
             </div>
@@ -202,8 +202,8 @@
                         id="confirm-password"
                         name="confirm_password"
                         placeholder="Confirm your new password"
-                        minlength="12"
-                        maxlength="72"
+                        minlength="{{ app_limits.min_password_length }}"
+                        maxlength="{{ app_limits.bcrypt_max_password_bytes }}"
                         autocomplete="new-password"
                         required
                     >

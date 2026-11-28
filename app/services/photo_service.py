@@ -6,11 +6,14 @@ from PIL import Image, UnidentifiedImageError
 from flask import current_app
 from werkzeug.datastructures import FileStorage
 
+from app.constants import (
+    MAX_PHOTO_SIZE_BYTES,
+    MAX_PHOTO_SIZE_MB,
+    MAX_PHOTOS_PER_JOURNAL,
+)
+
 
 logger = logging.getLogger(__name__)
-
-MAX_PHOTO_SIZE = 5 * 1024 * 1024
-MAX_PHOTOS = 5
 
 ALLOWED_FORMATS = {
     "JPEG": ".jpg",
@@ -49,9 +52,9 @@ def validate_photo(file: FileStorage):
             "File foto tidak boleh kosong."
         )
 
-    if file_size > MAX_PHOTO_SIZE:
+    if file_size > MAX_PHOTO_SIZE_BYTES:
         raise PhotoValidationError(
-            "Ukuran setiap foto maksimal 5 MB."
+            f"Ukuran setiap foto maksimal {MAX_PHOTO_SIZE_MB} MB."
         )
 
     try:
@@ -107,9 +110,9 @@ def save_journal_photos(files, journal_id):
         if file and file.filename
     ]
 
-    if len(selected_files) > MAX_PHOTOS:
+    if len(selected_files) > MAX_PHOTOS_PER_JOURNAL:
         raise PhotoValidationError(
-            "Maksimal 5 foto untuk setiap jurnal."
+            f"Maksimal {MAX_PHOTOS_PER_JOURNAL} foto untuk setiap jurnal."
         )
 
     if not selected_files:

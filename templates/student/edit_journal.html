@@ -17,6 +17,8 @@
     </header>
 
     <form id="edit-journal-form" class="edit-journal-form" method="POST"
+          data-max-photos="{{ app_limits.max_photos_per_journal }}"
+          data-max-photo-size-mb="{{ app_limits.max_photo_size_mb }}"
           action="{{ url_for('student.edit_journal', journal_id=journal.journal_id) }}"
           enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -29,9 +31,9 @@
 
             <div class="edit-journal-field">
                 <label for="edit-title">Judul Aktivitas <b>*</b></label>
-                <input id="edit-title" type="text" name="title" maxlength="150"
+                <input id="edit-title" type="text" name="title" maxlength="{{ app_limits.max_journal_title_length }}"
                        value="{{ request.form.get('title', journal.title) }}" required>
-                <small>Maksimal 150 karakter.</small>
+                <small>Maksimal {{ app_limits.max_journal_title_length }} karakter.</small>
             </div>
 
             <div class="edit-journal-field">
@@ -55,8 +57,8 @@
             </div>
 
             <div class="edit-photo-summary">
-                <strong><span id="edit-photo-count">{{ journal.photos|length }}</span> / 5 foto</strong>
-                <span id="edit-photo-remaining">Kapasitas tersisa {{ 5 - journal.photos|length }} foto</span>
+                <strong><span id="edit-photo-count">{{ journal.photos|length }}</span> / {{ app_limits.max_photos_per_journal }} foto</strong>
+                <span id="edit-photo-remaining">Kapasitas tersisa {{ app_limits.max_photos_per_journal - journal.photos|length }} foto</span>
             </div>
 
             {% if journal.photos %}
@@ -78,11 +80,11 @@
 
             <div class="edit-upload-box">
                 <label for="edit-photos"><i class="fas fa-cloud-upload-alt"></i> Tambahkan Foto Baru</label>
-                <p>JPG, PNG, atau WebP. Maksimal 5 MB per foto.</p>
+                <p>JPG, PNG, atau WebP. Maksimal {{ app_limits.max_photo_size_mb }} MB per foto.</p>
                 <input id="edit-photos" type="file" name="photos" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple>
                 <div id="edit-new-photo-preview" class="edit-new-photo-preview" aria-live="polite"></div>
             </div>
-            <p class="edit-photo-warning">Jumlah foto yang dipertahankan ditambah foto baru tidak boleh melebihi 5.</p>
+            <p class="edit-photo-warning">Jumlah foto yang dipertahankan ditambah foto baru tidak boleh melebihi {{ app_limits.max_photos_per_journal }}.</p>
         </section>
 
         <div class="edit-journal-actions">

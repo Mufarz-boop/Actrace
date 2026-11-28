@@ -22,8 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const submitLabel = submitButton?.querySelector(".btn__label");
 
-    const MAX_PHOTOS = 5;
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    // Batas dibaca dari atribut data-* form (sumber: app/constants.py).
+    // Validasi di sini hanya kemudahan; backend tetap menjadi penentu.
+    const MAX_PHOTOS = Number(form.dataset.maxPhotos);
+    const MAX_PHOTO_SIZE_MB = Number(form.dataset.maxPhotoSizeMb);
+    const MAX_FILE_SIZE = MAX_PHOTO_SIZE_MB * 1024 * 1024;
+    const MAX_TITLE_LENGTH = Number(form.dataset.maxTitleLength);
 
     const ALLOWED_TYPES = [
         "image/jpeg",
@@ -44,11 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const length = titleInput.value.length;
 
-        titleCounter.textContent = `${length}/150`;
+        titleCounter.textContent = `${length}/${MAX_TITLE_LENGTH}`;
 
         titleCounter.classList.toggle(
             "is-limit",
-            length >= 150
+            length >= MAX_TITLE_LENGTH
         );
     }
 
@@ -108,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            return `${file.name} melebihi batas 5 MB.`;
+            return `${file.name} melebihi batas ${MAX_PHOTO_SIZE_MB} MB.`;
         }
 
         return null;
@@ -220,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const remainingSlots = MAX_PHOTOS - selectedFiles.length;
 
         if (remainingSlots <= 0) {
-            alert("Maksimal 5 foto untuk setiap jurnal.");
+            alert(`Maksimal ${MAX_PHOTOS} foto untuk setiap jurnal.`);
             return;
         }
 
@@ -228,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (const file of incomingFiles) {
             if (selectedFiles.length >= MAX_PHOTOS) {
-                alert("Maksimal 5 foto untuk setiap jurnal.");
+                alert(`Maksimal ${MAX_PHOTOS} foto untuk setiap jurnal.`);
                 break;
             }
 
@@ -344,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (selectedFiles.length > MAX_PHOTOS) {
             event.preventDefault();
 
-            alert("Maksimal 5 foto untuk setiap jurnal.");
+            alert(`Maksimal ${MAX_PHOTOS} foto untuk setiap jurnal.`);
             return;
         }
 

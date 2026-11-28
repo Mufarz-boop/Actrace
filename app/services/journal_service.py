@@ -3,6 +3,7 @@ from datetime import date
 
 from mysql.connector import Error
 
+from app.constants import MAX_JOURNAL_TITLE_LENGTH, MAX_PHOTOS_PER_JOURNAL
 from app.db import get_db_connection
 
 from app.services.photo_service import (
@@ -55,9 +56,9 @@ def validate_journal_data(activity_date, title, description):
     title = title.strip()
     description = description.strip()
 
-    if len(title) > 150:
+    if len(title) > MAX_JOURNAL_TITLE_LENGTH:
         raise JournalValidationError(
-            "Judul maksimal 150 karakter."
+            f"Judul maksimal {MAX_JOURNAL_TITLE_LENGTH} karakter."
         )
 
     if len(description.encode("utf-8")) > MAX_DESCRIPTION_BYTES:
@@ -488,13 +489,15 @@ def update_journal(
             )
 
         remaining_count = len(current_photos) - len(remove_ids)
-        if remaining_count + len(selected_photos) > 5:
+        if remaining_count + len(selected_photos) > MAX_PHOTOS_PER_JOURNAL:
             raise PhotoValidationError(
-                "Maksimal 5 foto per jurnal. Hapus foto lama atau kurangi foto baru."
+                f"Maksimal {MAX_PHOTOS_PER_JOURNAL} foto per jurnal. Hapus foto lama atau kurangi foto baru."
             )
 
-        if len(selected_photos) > 5:
-            raise PhotoValidationError("Maksimal 5 foto untuk setiap jurnal.")
+        if len(selected_photos) > MAX_PHOTOS_PER_JOURNAL:
+            raise PhotoValidationError(
+                f"Maksimal {MAX_PHOTOS_PER_JOURNAL} foto untuk setiap jurnal."
+            )
 
         # Simpan file baru sebelum commit; jika transaksi gagal, file dibersihkan.
         if selected_photos:
